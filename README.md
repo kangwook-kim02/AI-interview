@@ -79,3 +79,5 @@ Supabase 설정·클라이언트·세션 갱신 사용법은 [SETUP §B.1](./doc
 DB 적용·격리 검증·타입 생성은 [SETUP §B.2](./docs/SETUP.md#b2-db-마이그레이션rls생성-타입)를 참고한다.
 본문 폰트는 [Pretendard](https://github.com/orioncactus/pretendard) v1.3.9를 로컬에서 제공하며,
 배포 라이선스는 [OFL.txt](./src/assets/fonts/OFL.txt)에 포함되어 있다.
+제목은 Gmarket Sans를 로컬에서 제공한다. [공통 스타일 사용법](./docs/DESIGN_SYSTEM.md)과
+[폰트 출처·라이선스](./src/assets/fonts/README.md)를 참고한다.
