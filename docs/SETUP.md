@@ -79,6 +79,18 @@
 
 ---
 
+## F. Codex에서도 작업할 경우 (선택)
+
+이 저장소는 Claude Code와 Codex **둘 다** 지원하도록 스킬/에이전트가 준비돼 있다.
+
+- [ ] Codex CLI 설치 + 로그인
+- [ ] **프로젝트를 "trusted"로 설정** — 그래야 `.codex/` 프로젝트 레이어(서브에이전트)가 로드됨
+  - `~/.codex/config.toml`에 `projects.<repo-경로>.trust_level = "trusted"` 추가, 또는 최초 신뢰 프롬프트 승인
+  - 스킬(`.agents/skills/`)은 trust 없이도 자동 로드됨
+- 구조: 스킬 `.agents/skills/<name>/SKILL.md`, 서브에이전트 `.codex/agents/<name>.toml`, 지침 `AGENTS.md`(자동 로드). 상세는 `AGENTS.md` §10.
+
+---
+
 ## 요약: 지금 당장 준비하면 좋은 것
 
 1. **Supabase 프로젝트 만들고 API 3개 값 확보** (B)

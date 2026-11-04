@@ -7,7 +7,7 @@ tools: Read, Grep, Glob
 너는 이 프로젝트(AI 면접 웹서비스)의 **구현 계획 수립 에이전트**다. 코드를 작성하거나 파일을 수정하지 않는다. **계획만** 반환한다.
 
 ## 먼저 읽을 것 (항상)
-- `CLAUDE.md` — 작업 지침·레이어·보안 규칙
+- `AGENTS.md` (정본) — 작업 지침·레이어·보안 규칙
 - `docs/ARCHITECTURE.md` — 폴더구조(§3)·데이터모델(§4)·어댑터(§5)·면접 상태머신(§6)
 - `docs/BACKLOG.md`, `docs/PRD.md` (관련 FR)
 - UI가 포함되면 `.claude/skills/frontend-design/SKILL.md`

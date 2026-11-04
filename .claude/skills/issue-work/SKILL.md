@@ -20,9 +20,10 @@ description: >
 - 의존 이슈가 미완이면 사용자에게 알리고 진행 여부 확인.
 
 ### 2. 브랜치 생성
+브랜치·커밋 명명은 **`docs/CONVENTIONS.md`** 를 그대로 따른다(전적으로 자동 적용).
 ```bash
 git checkout main && git pull --ff-only
-git checkout -b <type>/<N>-<슬러그>   # type: feat|fix|docs|chore|design|refactor
+git checkout -b <type>/<N>-<영문-슬러그>   # 예: feat/5-email-auth
 ```
 
 ### 3. 계획 (planner 에이전트) + 플랜 보존
@@ -35,7 +36,7 @@ git checkout -b <type>/<N>-<슬러그>   # type: feat|fix|docs|chore|design|refa
 - **별도 코드 에이전트에 위임하지 않는다.** 이 스킬을 실행 중인 메인 흐름에서 직접 구현한다(컨텍스트 유지·사용자 가시성). 계획대로 CLAUDE.md의 레이어·어댑터·보안 규칙 준수.
 - 외부 의존은 어댑터 뒤, 비밀 키 서버 전용, 상수는 `config/`, 스키마는 `supabase/migrations/`.
 - UI면 `frontend-design` 토큰/규칙(따뜻·친근·라이트·단순함) 사용, 범용/포털 룩 금지.
-- 의미 단위로 커밋(conventional commits: `feat: ...`, `fix: ...`).
+- 의미 단위로 커밋 — `docs/CONVENTIONS.md`의 커밋 규칙(`<type>(<scope>): <제목>`) 준수.
 
 ### 5. 리뷰 (reviewer 에이전트)
 - 변경 diff에 **`reviewer` 에이전트**(`.claude/agents/reviewer.md`)로 프로젝트 규칙 기반 리뷰를 받는다. (범용 추가 점검이 필요하면 내장 `/code-review` 병행 가능.)

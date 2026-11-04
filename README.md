@@ -22,7 +22,8 @@ STT 전사 흐름으로 면접을 진행한다. 전 과정은 카메라/마이�
 - [PRD](./docs/PRD.md) — 제품 요구사항 (랜딩 페이지 포함)
 - [아키텍처](./docs/ARCHITECTURE.md) — 폴더 구조·데이터 모델·면접 상태머신
 - [수동 작업 체크리스트](./docs/SETUP.md) — API 키 발급 등 사람이 직접 할 일
-- [작업 지침](./CLAUDE.md) — 에이전트/개발 규칙 (정본; `AGENTS.md`는 포인터)
+- [작업 지침 (정본)](./AGENTS.md) — 에이전트/개발 규칙 (`CLAUDE.md`는 Claude Code용 포인터)
+- [명명 규칙](./docs/CONVENTIONS.md) — 이슈/브랜치/커밋/PR 규칙 (AI 자동 적용)
 - [백로그](./docs/BACKLOG.md) — 의존성 순서 작업 목록 (이슈 단위)
 
 ## 상태
