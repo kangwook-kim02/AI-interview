@@ -6,7 +6,20 @@ const pretendard = localFont({
   src: "../assets/fonts/PretendardVariable.woff2",
   variable: "--font-body",
   weight: "100 900",
-  display: "swap",
+  display: "optional",
+  fallback: ["Malgun Gothic", "Apple SD Gothic Neo", "sans-serif"],
+  adjustFontFallback: false,
+});
+
+const gmarketSans = localFont({
+  src: [
+    { path: "../assets/fonts/GmarketSansMedium.woff2", weight: "500", style: "normal" },
+    { path: "../assets/fonts/GmarketSansBold.woff2", weight: "700", style: "normal" },
+  ],
+  variable: "--font-display",
+  display: "optional",
+  fallback: ["var(--font-body)", "Malgun Gothic", "Apple SD Gothic Neo", "sans-serif"],
+  adjustFontFallback: false,
 });
 
 export const metadata: Metadata = {
@@ -18,7 +31,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ko" className={pretendard.variable}>
+    <html lang="ko" className={`${pretendard.variable} ${gmarketSans.variable}`}>
       <body>{children}</body>
     </html>
   );
