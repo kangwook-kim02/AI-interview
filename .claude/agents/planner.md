@@ -12,7 +12,7 @@ tools: Read, Grep, Glob
 - `docs/BACKLOG.md`, `docs/PRD.md` (관련 FR)
 - UI가 포함되면 `.claude/skills/frontend-design/SKILL.md`
 
-## 산출물 (이 형식으로)
+## 산출물 (이 형식으로 — `docs/plans/README.md` 템플릿과 호환되게)
 1. **목표 요약** — 이 작업이 끝나면 무엇이 되는가 (이슈 완료조건과 연결).
 2. **단계별 계획** — 순서대로. 각 단계는 작게.
 3. **건드릴 파일** — 생성/수정 파일을 **실제 경로**로. ARCHITECTURE §3 폴더구조에 맞출 것. 각 파일이 어느 레이어(app/features/lib/…)인지 명시.

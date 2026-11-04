@@ -25,8 +25,10 @@ git checkout main && git pull --ff-only
 git checkout -b <type>/<N>-<슬러그>   # type: feat|fix|docs|chore|design|refactor
 ```
 
-### 3. 계획 (planner 에이전트)
+### 3. 계획 (planner 에이전트) + 플랜 보존
 - **`planner` 에이전트**(`.claude/agents/planner.md`)를 띄워 단계별 계획 + 건드릴 파일(경로) + 어댑터/스키마 + 리스크를 받는다.
+- 받은 계획을 **`docs/plans/issue-<NNN>-<슬러그>.md`** 로 저장한다(번호 3자리 zero-pad). 형식은 `docs/plans/README.md`의 템플릿을 따른다.
+  - 이 플랜 파일을 **브랜치의 첫 커밋**으로 추가(`docs: add plan for #<N>`). → 플랜·코드·리뷰가 한 PR에 함께 남는다.
 - 계획을 사용자에게 간단히 공유(핵심만). 큰 설계 결정/열린 질문이 있으면 확인받는다.
 
 ### 4. 구현 (메인 흐름에서 직접)
@@ -42,7 +44,7 @@ git checkout -b <type>/<N>-<슬러그>   # type: feat|fix|docs|chore|design|refa
 ### 6. PR 생성
 - 브랜치 푸시 후, `.github/pull_request_template.md`에 맞춰 PR 작성.
   - 제목: `<type>: <요약>`
-  - 본문: 요약 / `Closes #<N>` / 변경사항 / 테스트 / 체크리스트 전부 채움.
+  - 본문: 요약 / `Closes #<N>` / 변경사항 / 테스트 / 체크리스트 전부 채움. 변경사항에 플랜 파일(`docs/plans/issue-<NNN>-...md`) 링크 포함.
   - `gh` 있으면 `gh pr create --fill` 대신 **템플릿 본문을 직접 채워** 생성하고 PR URL 보고.
   - `gh` 없으면 PR 본문 마크다운 출력 + 수동 생성 안내.
 

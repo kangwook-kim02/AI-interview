@@ -117,6 +117,7 @@ npm run lint
   - PR: `.github/pull_request_template.md` 사용, 본문에 `Closes #<번호>`.
 - 이슈 작업 흐름: 읽기 → 브랜치 → **`planner` 에이전트** 계획 → **메인 흐름에서 구현** → **`reviewer` 에이전트** 리뷰 → PR.
   - 에이전트: `.claude/agents/planner.md`(계획), `.claude/agents/reviewer.md`(프로젝트 규칙 리뷰). 구현은 별도 에이전트로 빼지 않는다(컨텍스트 유지).
+  - **플랜 보존**: 각 이슈의 계획은 `docs/plans/issue-<NNN>-<슬러그>.md`로 저장하고 해당 브랜치/PR에 함께 커밋한다(규칙: `docs/plans/README.md`).
 
 ## 9. 작업 시 주의
 
