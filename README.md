@@ -30,7 +30,8 @@ STT 전사 흐름으로 면접을 진행한다. MVP는 카메라 표시와 전�
 
 M1 기본 스캐폴딩: 한국어 초기 화면과 개발·빌드·린트 환경을 제공한다.
 Supabase의 브라우저·서버 클라이언트와 검증된 사용자 조회·쿠키 세션 갱신 기반을 제공한다.
-인증 UI, DB 스키마, 자소서 관리와 면접 기능은 후속 이슈에서 구현한다.
+자소서·면접 DB 마이그레이션, 계정별 RLS와 생성 DB 타입을 제공한다.
+인증 UI, 자소서 관리와 면접 기능은 후속 이슈에서 구현한다.
 
 ## 개발 환경 설정
 
@@ -59,6 +60,7 @@ http://localhost:3000 에서 초기 화면을 확인할 수 있다.
 npm run lint       # ESLint
 npm run typecheck  # TypeScript
 npm run test       # 설정·인증·쿠키 경계 테스트 (모킹, 실제 키 불필요)
+npm run test:db:http # 실제 Supabase 로그인·RLS 검사 (테스트 계정 생성/삭제, .env.local 필요)
 npm run build      # 프로덕션 빌드
 npm run start      # 빌드한 앱 실행
 ```
@@ -69,9 +71,11 @@ npm run start      # 빌드한 앱 실행
 - `src/features`: 인증·자소서·면접 도메인 기능
 - `src/lib`: Supabase·AI·음성·녹화 어댑터
 - `src/components/ui`, `src/types`, `src/config`: 공통 UI·타입·설정
-- `supabase/migrations`: 향후 DB 스키마 변경 SQL
+- `supabase/migrations`: DB 스키마·RLS 변경 SQL
+- `supabase/tests`: 두 계정·비로그인 DB 격리 검증 SQL
 
 의존 방향은 `app → features → lib`이다. 아직 구현되지 않은 영역은 디렉터리만 준비되어 있다.
 Supabase 설정·클라이언트·세션 갱신 사용법은 [SETUP §B.1](./docs/SETUP.md#b1-supabase-연결과-세션-조회-확인)을 참고한다.
+DB 적용·격리 검증·타입 생성은 [SETUP §B.2](./docs/SETUP.md#b2-db-마이그레이션rls생성-타입)를 참고한다.
 본문 폰트는 [Pretendard](https://github.com/orioncactus/pretendard) v1.3.9를 로컬에서 제공하며,
 배포 라이선스는 [OFL.txt](./src/assets/fonts/OFL.txt)에 포함되어 있다.

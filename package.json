@@ -11,7 +11,8 @@
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:db:http": "node --env-file=.env.local scripts/verify-supabase-http.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",
