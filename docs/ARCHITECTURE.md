@@ -17,7 +17,7 @@
 | 인증 | **Supabase Auth** | 이메일/비밀번호, 추후 OAuth |
 | DB | **Supabase Postgres** | RLS로 계정 격리 |
 | 파일 저장 | **Supabase Storage** | 면접 녹화 영상/오디오 |
-| LLM | **Claude API** (`claude-sonnet-5` 기본, 고난도 시 `claude-opus-4-8`) | 질문/꼬리질문 생성 |
+| LLM | **미지정 (provider-무관)** — 어댑터로 교체 가능 (Claude / OpenAI 등) | 질문/꼬리질문 생성. 구현 단계에서 선택, 코드는 특정 provider에 종속 금지 |
 | TTS/STT | **브라우저 Web Speech API** | 어댑터로 추상화 (교체 가능) |
 | 녹화 | **MediaRecorder API** | 카메라+마이크 → webm |
 | 상태관리 | React 상태 + **Zustand**(면접 세션 전용) | 서버 상태는 React Query/서버 컴포넌트 |
@@ -25,6 +25,8 @@
 | 배포 | **Vercel** + Supabase (managed) | |
 
 > **원칙:** 외부 의존(LLM, TTS, STT, Storage)은 전부 `lib/`의 어댑터 인터페이스 뒤에 숨긴다. 페이지/컴포넌트는 구현체를 직접 import 하지 않는다.
+>
+> **LLM provider 미지정:** 질문 생성은 `QuestionGenerator` 인터페이스에만 의존한다. Claude든 OpenAI든 다른 LLM이든 **구현체만 갈아끼우면 되고 상위 코드는 불변**이다. 어떤 provider를 쓸지는 구현 단계에서 환경변수(`LLM_PROVIDER`)로 선택하며, **어느 한 provider에 코드가 종속되지 않도록** 한다.
 
 ---
 
@@ -113,9 +115,12 @@ AI-interview/
 │  │  │  ├─ server.ts              # 서버 클라이언트 (쿠키 기반)
 │  │  │  └─ storage.ts             # 녹화 업로드 헬퍼
 │  │  ├─ ai/
-│  │  │  ├─ types.ts               # QuestionGenerator 인터페이스
-│  │  │  ├─ claude.ts              # Claude 구현체 (서버 전용)
-│  │  │  └─ prompts.ts             # 프롬프트 템플릿 (버전 관리)
+│  │  │  ├─ types.ts               # QuestionGenerator 인터페이스 (provider-무관 계약)
+│  │  │  ├─ index.ts               # 팩토리: LLM_PROVIDER 보고 구현체 선택/반환
+│  │  │  ├─ providers/
+│  │  │  │  ├─ claude.ts           # Claude 구현체 (서버 전용, 구현 단계에 추가)
+│  │  │  │  └─ openai.ts           # OpenAI 구현체 (서버 전용, 구현 단계에 추가)
+│  │  │  └─ prompts.ts             # 프롬프트 템플릿 (버전 관리, provider-중립)
 │  │  ├─ speech/
 │  │  │  ├─ types.ts               # TTS/STT 인터페이스
 │  │  │  ├─ web-speech-tts.ts      # Web Speech 구현체
@@ -262,7 +267,22 @@ export interface QuestionGenerator {
   }): Promise<string | null>;
 }
 ```
-→ 구현: `claude.ts`. 추후 다른 LLM으로 교체해도 상위 코드 불변.
+→ 구현: `providers/*.ts`. **상위 코드는 항상 `getQuestionGenerator()` 팩토리를 통해서만 접근**하고, 구체 provider를 직접 import 하지 않는다:
+
+```ts
+// lib/ai/index.ts
+import type { QuestionGenerator } from './types';
+
+export function getQuestionGenerator(): QuestionGenerator {
+  switch (process.env.LLM_PROVIDER) {
+    case 'openai': return new OpenAIQuestionGenerator();
+    case 'claude': return new ClaudeQuestionGenerator();
+    default: throw new Error('LLM_PROVIDER 미설정');
+  }
+}
+```
+
+→ provider 교체는 `.env`의 `LLM_PROVIDER` 값과 해당 API 키만 바꾸면 끝. 호출부(API 라우트)는 불변.
 
 ### 5.2 음성 (`lib/speech/types.ts`)
 ```ts
@@ -355,7 +375,11 @@ idle
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=        # 서버 전용(절대 클라 노출 금지)
-ANTHROPIC_API_KEY=                # 서버 전용
+
+# LLM — provider 미지정. 구현 단계에서 하나 선택
+LLM_PROVIDER=                     # 'claude' | 'openai' | ... (서버 전용)
+ANTHROPIC_API_KEY=                # LLM_PROVIDER=claude 일 때만 (서버 전용)
+OPENAI_API_KEY=                   # LLM_PROVIDER=openai 일 때만 (서버 전용)
 ```
 
 ---

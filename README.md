@@ -13,7 +13,7 @@ STT 전사 흐름으로 면접을 진행한다. 전 과정은 카메라/마이�
 - **Next.js 15 (App Router) + TypeScript**
 - **Tailwind CSS** + shadcn/ui
 - **Supabase** (Auth · Postgres · Storage)
-- **Claude API** — 질문/꼬리질문 생성 (서버 전용)
+- **LLM (provider 미지정)** — 질문/꼬리질문 생성 (서버 전용). 어댑터로 Claude·OpenAI 등 교체 가능, 구현 단계에서 선택
 - **Web Speech API** — TTS/STT (어댑터로 추상화, 교체 가능)
 - **MediaRecorder API** — 카메라+마이크 녹화
 
@@ -35,7 +35,8 @@ npm install
 # 2) 환경 변수 (.env.local)
 cp .env.local.example .env.local
 # NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY
-# SUPABASE_SERVICE_ROLE_KEY / ANTHROPIC_API_KEY 채우기
+# SUPABASE_SERVICE_ROLE_KEY
+# LLM_PROVIDER (claude|openai) + 해당 API 키 채우기
 
 # 3) 개발 서버
 npm run dev
