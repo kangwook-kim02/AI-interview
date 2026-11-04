@@ -74,10 +74,11 @@ AI-interview/
 ├─ public/
 ├─ src/
 │  ├─ app/                         # Next.js App Router (라우팅 전용, 로직 최소화)
+│  │  ├─ page.tsx                  # 랜딩 페이지 (공개 `/`, 로그인 시 /dashboard 리다이렉트)
 │  │  ├─ (auth)/
 │  │  │  ├─ login/page.tsx
 │  │  │  └─ signup/page.tsx
-│  │  ├─ (dashboard)/
+│  │  ├─ dashboard/
 │  │  │  ├─ layout.tsx             # 인증 가드 + 공통 레이아웃
 │  │  │  ├─ page.tsx               # 자소서 카드 목록(대시보드)
 │  │  │  └─ cover-letters/
