@@ -374,14 +374,18 @@ idle
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=        # 서버 전용(절대 클라 노출 금지)
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SECRET_KEY=              # 관리자 작업이 필요할 때만 사용, 서버 전용(RLS 우회)
 
 # LLM — provider 미지정. 구현 단계에서 하나 선택
 LLM_PROVIDER=                     # 'claude' | 'openai' | ... (서버 전용)
 ANTHROPIC_API_KEY=                # LLM_PROVIDER=claude 일 때만 (서버 전용)
 OPENAI_API_KEY=                   # LLM_PROVIDER=openai 일 때만 (서버 전용)
 ```
+
+Supabase의 Publishable key(`sb_publishable_...`)와 사용자 세션으로 일반 인증·데이터 접근을 처리한다.
+Secret key(`sb_secret_...`)는 서버 관리자 작업용이며 일반 인증의 필수 설정은 아니다.
+이름이 다른 기존 `anon`·`service_role` 키는 레거시 키다.
 
 ---
 

@@ -11,7 +11,7 @@
 ## 0. 프로젝트 한 줄 요약
 자기소개서를 기반으로 AI가 실시간 음성 면접(질문 TTS → 음성 답변 → 꼬리질문)을 진행하는 웹 서비스.
 상세: [docs/PRD.md](./docs/PRD.md), [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
-현재 상태: **M0 문서 확정 완료, 아직 코드 스캐폴딩 전.**
+현재 상태: **M1 기본 스캐폴딩 준비. 인증·DB 연동과 도메인 기능은 후속 이슈에서 구현.**
 
 ## 1. 기술 스택 (확정)
 - **Next.js 15 (App Router) + TypeScript**
@@ -38,7 +38,7 @@
 6. **스키마 변경은 `supabase/migrations/`에 SQL로** 버전 관리.
 
 ## 3. 서버/클라이언트 & 보안 경계
-- **비밀 키(SUPABASE_SERVICE_ROLE_KEY, 각 LLM API 키)는 서버 전용.** 절대 클라 번들/`NEXT_PUBLIC_*`에 넣지 않는다.
+- **비밀 키(SUPABASE_SECRET_KEY, 각 LLM API 키)는 서버 전용.** 절대 클라 번들/`NEXT_PUBLIC_*`에 넣지 않는다.
 - **LLM 호출은 항상 서버(API 라우트/서버 액션) 경유.** 브라우저에서 LLM API 직접 호출 금지.
 - TTS/STT/MediaRecorder는 **클라이언트 전용**(브라우저 API).
 - 모든 데이터는 로그인 계정 귀속. Supabase **RLS로 격리** + 서버 코드에서도 소유권 검증(RLS에만 의존 금지).
@@ -64,21 +64,28 @@ src/components/ui · src/types · src/config · supabase/migrations
 `.env.local` (서버 전용 키는 클라 노출 금지):
 ```
 NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SECRET_KEY=     # 서버 관리자 작업이 필요할 때만 사용 (RLS 우회)
 LLM_PROVIDER=            # claude | openai | ...
 ANTHROPIC_API_KEY=       # LLM_PROVIDER=claude 일 때
 OPENAI_API_KEY=          # LLM_PROVIDER=openai 일 때
 ```
 
-## 7. 명령어 (스캐폴딩 이후)
+## 7. 명령어
+
+Node.js 22 이상을 사용한다(24 LTS 권장). Windows PowerShell에서 실행 정책으로 `npm`이 차단되면 `npm.cmd`를 사용한다.
+
 ```bash
 npm install
 npm run dev     # 개발 서버
 npm run build
 npm run lint
+npm run typecheck
+npm run start   # 빌드한 앱 실행
 ```
-(스캐폴딩 전 — 생성 후 실제 스크립트에 맞게 이 섹션 갱신.)
+
+일반 사용자 인증·데이터 접근에는 Publishable key와 사용자 세션을 사용한다.
+Secret key는 RLS를 우회하므로 관리자 작업이 필요한 서버 코드에서만 사용한다.
 
 ## 8. 작업 흐름 (이슈 → 브랜치 → PR)
 - 의미 있는 작업은 **이슈 단위**. 백로그: [docs/BACKLOG.md](./docs/BACKLOG.md)(의존성 순서). trivial(오타 등)은 이슈 없이 작은 커밋.
