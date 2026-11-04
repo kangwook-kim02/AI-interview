@@ -3,6 +3,7 @@ import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseConfig } from "@/config/supabase";
+import type { Database } from "@/types/database";
 import { isUnauthenticatedError } from "./errors";
 
 export async function updateSupabaseSession(request: NextRequest) {
@@ -10,7 +11,7 @@ export async function updateSupabaseSession(request: NextRequest) {
   let response = NextResponse.next({ request });
   const cacheHeaders = new Headers();
 
-  const supabase = createServerClient(url, publishableKey, {
+  const supabase = createServerClient<Database>(url, publishableKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
