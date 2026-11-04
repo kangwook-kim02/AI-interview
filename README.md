@@ -29,11 +29,12 @@ STT 전사 흐름으로 면접을 진행한다. MVP는 카메라 표시와 전�
 ## 상태
 
 M1 기본 스캐폴딩: 한국어 초기 화면과 개발·빌드·린트 환경을 제공한다.
-Supabase 연동, 인증, 자소서 관리와 면접 기능은 후속 이슈에서 구현한다.
+Supabase의 브라우저·서버 클라이언트와 검증된 사용자 조회·쿠키 세션 갱신 기반을 제공한다.
+인증 UI, DB 스키마, 자소서 관리와 면접 기능은 후속 이슈에서 구현한다.
 
 ## 개발 환경 설정
 
-Node.js 22 이상(24 LTS 권장)이 필요하다. PowerShell에서 `npm` 실행이 차단되면 `npm.cmd`를 사용한다.
+Node.js 22.x는 22.12 이상, 또는 24 이상(24 LTS 권장)이 필요하다. PowerShell에서 `npm` 실행이 차단되면 `npm.cmd`를 사용한다.
 
 ```bash
 # 1) 의존성 설치
@@ -57,6 +58,7 @@ http://localhost:3000 에서 초기 화면을 확인할 수 있다.
 ```bash
 npm run lint       # ESLint
 npm run typecheck  # TypeScript
+npm run test       # 설정·인증·쿠키 경계 테스트 (모킹, 실제 키 불필요)
 npm run build      # 프로덕션 빌드
 npm run start      # 빌드한 앱 실행
 ```
@@ -70,5 +72,6 @@ npm run start      # 빌드한 앱 실행
 - `supabase/migrations`: 향후 DB 스키마 변경 SQL
 
 의존 방향은 `app → features → lib`이다. 아직 구현되지 않은 영역은 디렉터리만 준비되어 있다.
+Supabase 설정·클라이언트·세션 갱신 사용법은 [SETUP §B.1](./docs/SETUP.md#b1-supabase-연결과-세션-조회-확인)을 참고한다.
 본문 폰트는 [Pretendard](https://github.com/orioncactus/pretendard) v1.3.9를 로컬에서 제공하며,
 배포 라이선스는 [OFL.txt](./src/assets/fonts/OFL.txt)에 포함되어 있다.
