@@ -106,7 +106,18 @@ npm run lint
 
 ---
 
-## 8. 작업 시 주의
+## 8. 작업 흐름 (이슈 → 브랜치 → PR)
+
+- 의미 있는 작업은 **이슈 단위**로 진행한다. 백로그: [docs/BACKLOG.md](./docs/BACKLOG.md) (의존성 순서).
+  - 이슈 생성 → `issue-create` 스킬, 이슈 작업 → `issue-work` 스킬.
+  - 예외: 오타·한 줄 수정 등 trivial은 이슈 없이 작은 커밋 가능.
+- **main에 직접 커밋/푸시 금지.** 항상 브랜치에서 작업 후 PR.
+  - 브랜치: `<type>/<이슈번호>-<슬러그>` (type: `feat|fix|docs|chore|design|refactor`)
+  - 커밋: conventional commits (`feat: ...`, `fix: ...`).
+  - PR: `.github/pull_request_template.md` 사용, 본문에 `Closes #<번호>`.
+- 이슈 작업 흐름: 읽기 → 브랜치 → **Plan 에이전트** 계획 → 구현 → **/code-review** → PR.
+
+## 9. 작업 시 주의
 
 - 기능 구현은 **수직 슬라이스**로: 인증 → 자소서 CRUD → 질문 생성 → 면접 상태머신 → 기록 저장 순(마일스톤 M1~M6).
 - 되돌리기 어려운/외부로 나가는 작업(배포, 커밋/푸시, 외부 전송)은 사용자 승인 후 진행.

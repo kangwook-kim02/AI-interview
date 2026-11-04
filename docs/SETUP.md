@@ -14,6 +14,10 @@
   - https://vercel.com → GitHub로 로그인 → Import Project
   - 환경변수는 Vercel 프로젝트 Settings → Environment Variables 에 동일하게 등록
 - [ ] (선택) 커스텀 도메인 준비
+- [ ] **GitHub CLI(`gh`) 설치** — 이슈/PR 자동 생성(issue-create·issue-work 스킬)에 필요
+  - Windows: `winget install --id GitHub.cli` 또는 https://cli.github.com
+  - 설치 후 `gh auth login` 으로 로그인 (GitHub 계정 연결)
+  - 미설치 시에도 스킬은 이슈/PR 본문을 출력해 수동 복붙 가능(폴백)
 
 ---
 
