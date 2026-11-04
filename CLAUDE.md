@@ -62,6 +62,7 @@
 - 새 기능은 `features/<domain>/` 아래 UI+hook+action을 함께 둔다(응집).
 - 네이밍·주석 밀도는 주변 코드에 맞춘다. 불필요한 추상화 금지.
 - 한국어 UI 기본(MVP는 한국어 고정).
+- **모든 UI/프론트엔드 작업은 `frontend-design` 스킬(`.claude/skills/frontend-design/SKILL.md`)을 따른다.** 범용 AI 기본 디자인 금지 — "따뜻·친근/라이트/개성 있는 산세리프" 시스템과 금지 목록 준수.
 
 ---
 
