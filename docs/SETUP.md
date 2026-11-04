@@ -147,10 +147,36 @@ psql -X -v ON_ERROR_STOP=1 -1 -f supabase/migrations/20261104000000_create_inter
 psql -X -v ON_ERROR_STOP=1 -f supabase/tests/ownership.sql
 ```
 
-이 검증은 DB 정책 검증이다. Auth 로그인과 PostgREST HTTP 경로는 별도로 확인한다.
-원격 테스트 환경에서는 별도 두 이메일 계정으로 로그인한 클라이언트와 Publishable key만 쓰는
-비로그인 클라이언트를 만들고 같은 CRUD·외래키 변경을 요청한다. 본인 작업만 성공하고,
-타인 조회/수정/삭제는 빈 결과, 금지 INSERT/FK 변경과 비로그인 요청은 권한/제약 오류여야 한다.
+CLI 로그인 상태에서는 같은 SQL 검사를 원격 프로젝트에서 실행할 수 있다.
+
+```bash
+npx supabase@3.0.0 db query --remote=<프로젝트-ref> --file supabase/tests/ownership.sql --yes
+```
+
+#### 실제 로그인·PostgREST HTTP 검증
+
+위 SQL 검증과 별도로 `scripts/verify-supabase-http.mjs`가 실제 Auth와 PostgREST에 요청한다.
+`.env.local`의 URL·Publishable key·Secret key를 사용하며, 스키마 적용 후 명시적으로 실행한다.
+일반 `npm run test`에는 외부 요청을 포함하지 않는다.
+
+```bash
+npm run test:db:http
+```
+
+이 명령은 대상 프로젝트에 고유한 테스트 계정 두 개와 fixture를 만들고 삭제한다.
+Secret key는 테스트 계정 생성·정리와 schema/정리 결과 확인에만 사용한다.
+격리 검사는 각 계정의 이메일·비밀번호 로그인에서 받은 실제 사용자 토큰과 Publishable key로,
+비로그인 검사는 Publishable key만 사용한다. 비밀번호·키·토큰·Auth 응답 본문은 출력하지 않는다.
+
+- 두 계정의 비밀번호 로그인 및 `/auth/v1/user` 사용자/역할 확인
+- 5개 테이블의 본인 CRUD, 타 계정 조회/수정/삭제의 빈 결과, 소유자/FK 위조 INSERT·UPDATE 차단
+- 본인 다른 면접·타 계정 부모 질문 연결 및 기존 부모/자식 질문의 면접 이동 차단
+- 비로그인 조회·생성·수정·삭제의 권한 오류, 영상 없이 완료/Q&A 저장, 삭제 cascade
+- `finally`에서 해당 실행의 ID·이메일·metadata가 일치하는 테스트 사용자만 삭제하고,
+  해당 ID의 계정과 fixture 행이 남지 않았는지 확인
+
+실패하면 정리를 시도한 뒤 0이 아닌 종료 코드를 반환한다. 강제 프로세스 종료나 네트워크 장애로
+정리가 완료되지 않으면 해당 실행의 테스트 계정을 관리자 화면에서 확인한다.
 후속 서버 CRUD에서도 검증된 사용자 및 소유권을 확인해야 한다.
 공식 안내: [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security).
 
@@ -175,8 +201,9 @@ if ($LASTEXITCODE -ne 0) { throw 'DB 타입 포맷 실패' }
 `'--remote=postgresql://postgres@127.0.0.1:55433/postgres?sslmode=disable'`
 로컬 예시의 TLS 비활성화는 해당 일회용 loopback 연결에만 사용한다.
 
-현재 타입은 migration을 적용한 로컬 PostgreSQL 18.6에서 **Supabase CLI 3.0.0**으로 생성하고
-`oxfmt@0.66.0`으로 포맷했다. 공식 `@supabase/postgres-meta@0.100.0`의 생성 결과도 확인했다.
+현재 타입은 migration을 적용한 **원격 Supabase PostgreSQL 17.11**에서
+**Supabase CLI 3.0.0**으로 생성하고 `oxfmt@0.66.0`으로 포맷했다.
+초기 로컬 PostgreSQL 18.6 및 공식 `@supabase/postgres-meta@0.100.0`의 생성 결과도 확인했다.
 CLI/서버 생성기 버전에 따라 포맷이나 보조 타입이
 달라질 수 있으므로 재생성 diff와 `npm run typecheck`를 함께 확인한다.
 공식 안내: [생성 타입](https://supabase.com/docs/guides/api/rest/generating-types).

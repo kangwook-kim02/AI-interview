@@ -2,7 +2,7 @@
 
 - 이슈: #3
 - 브랜치: feat/3-database-rls
-- 상태: 구현중
+- 상태: 완료
 - 작성일: 2026-11-04
 
 ## 목표
@@ -87,3 +87,21 @@
   임시 Auth fixture를 사용한 역할/JWT DB 검증과 구분하여 PR에도 명시한다.
 - 코드·검증·리뷰 완료 후 2026-11-05 사용자 승인을 받아 계획/구현 커밋·푸시·초안 PR을
   진행한다. 원격 DB 적용 및 실제 Auth/PostgREST 검증은 이번 게시 승인 범위에 포함하지 않는다.
+
+### 2026-11-05 원격 적용 및 HTTP 검증 보완
+
+- 사용자가 원격 적용·실제 로그인/HTTP 검증 및 PR 반영을 추가 승인했다. CLI 로그인 완료 후
+  `.env.local`의 프로젝트와 일치하는 `interview-AI`에 migration을 적용했다.
+  적용 후 dry-run은 pending migration 0이며 원격 PostgreSQL 버전은 17.11이다.
+- `ownership.sql`을 CLI `db query`로 원격 DB에서도 실행했고 오류 없이 ROLLBACK했다.
+- `scripts/verify-supabase-http.mjs`와 명시적 `npm run test:db:http` 명령을 추가했다.
+  기존 오프라인 테스트와 분리하고, Secret key는 fixture 관리에만 사용한다.
+- 실제 이메일·비밀번호로 로그인한 A/B 계정 및 비로그인 요청으로 190개 HTTP 요청과
+  373개 assertion을 통과했다. 본인 CRUD, 계정/anon 격리, FK/소유자 우회 차단,
+  영상 없는 결과 저장, cascade 및 계정/데이터 정리를 확인했다.
+- 테스트 사용자는 해당 실행의 ID·이메일·metadata를 확인하고 삭제했으며, 사용자 GET의
+  404와 해당 fixture ID의 DB 조회 결과 0건을 확인했다. 키·비밀번호·토큰은 기록하지 않는다.
+- 실제 원격 DB에서 타입을 다시 생성했다. 이후 원격 검증 결과와 재실행 방법을 PR에 반영한다.
+- 원격 타입 갱신 및 HTTP 스크립트 추가 후 lint/typecheck/기존 29개 테스트/build가 모두 통과했다.
+- reviewer 재검토 must-fix 없음. nice-to-have인 정리 실패 메시지의 비밀값이 아닌 `test_run`
+  식별자를 추가하여 관리자 화면에서 잔여 fixture를 찾을 수 있게 했다.

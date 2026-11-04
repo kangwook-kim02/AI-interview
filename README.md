@@ -60,6 +60,7 @@ http://localhost:3000 에서 초기 화면을 확인할 수 있다.
 npm run lint       # ESLint
 npm run typecheck  # TypeScript
 npm run test       # 설정·인증·쿠키 경계 테스트 (모킹, 실제 키 불필요)
+npm run test:db:http # 실제 Supabase 로그인·RLS 검사 (테스트 계정 생성/삭제, .env.local 필요)
 npm run build      # 프로덕션 빌드
 npm run start      # 빌드한 앱 실행
 ```
