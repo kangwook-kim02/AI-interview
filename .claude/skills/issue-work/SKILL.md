@@ -25,19 +25,19 @@ git checkout main && git pull --ff-only
 git checkout -b <type>/<N>-<슬러그>   # type: feat|fix|docs|chore|design|refactor
 ```
 
-### 3. 계획 (Plan 에이전트)
-- **Plan 서브에이전트**를 띄워 단계별 구현 계획 + 건드릴 파일 + 리스크/의존을 받는다.
-- 계획을 사용자에게 간단히 공유(핵심만). 큰 설계 결정이 있으면 확인받는다.
+### 3. 계획 (planner 에이전트)
+- **`planner` 에이전트**(`.claude/agents/planner.md`)를 띄워 단계별 계획 + 건드릴 파일(경로) + 어댑터/스키마 + 리스크를 받는다.
+- 계획을 사용자에게 간단히 공유(핵심만). 큰 설계 결정/열린 질문이 있으면 확인받는다.
 
-### 4. 구현
-- 계획대로 구현. CLAUDE.md의 레이어·어댑터·보안 규칙 준수.
+### 4. 구현 (메인 흐름에서 직접)
+- **별도 코드 에이전트에 위임하지 않는다.** 이 스킬을 실행 중인 메인 흐름에서 직접 구현한다(컨텍스트 유지·사용자 가시성). 계획대로 CLAUDE.md의 레이어·어댑터·보안 규칙 준수.
 - 외부 의존은 어댑터 뒤, 비밀 키 서버 전용, 상수는 `config/`, 스키마는 `supabase/migrations/`.
 - UI면 `frontend-design` 토큰/규칙(따뜻·친근·라이트·단순함) 사용, 범용/포털 룩 금지.
 - 의미 단위로 커밋(conventional commits: `feat: ...`, `fix: ...`).
 
-### 5. 리뷰 (/code-review)
-- 변경 diff에 **`/code-review`** 실행(또는 리뷰 서브에이전트).
-- 나온 지적을 검토해 **타당한 것만** 반영(불필요한 과수정 금지). 반영 내역을 기록.
+### 5. 리뷰 (reviewer 에이전트)
+- 변경 diff에 **`reviewer` 에이전트**(`.claude/agents/reviewer.md`)로 프로젝트 규칙 기반 리뷰를 받는다. (범용 추가 점검이 필요하면 내장 `/code-review` 병행 가능.)
+- 나온 지적 중 **must-fix는 반영**, nice-to-have는 취사선택(불필요한 과수정 금지). 반영 내역을 기록.
 
 ### 6. PR 생성
 - 브랜치 푸시 후, `.github/pull_request_template.md`에 맞춰 PR 작성.
