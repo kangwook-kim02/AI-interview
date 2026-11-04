@@ -73,7 +73,7 @@ OPENAI_API_KEY=          # LLM_PROVIDER=openai 일 때
 
 ## 7. 명령어
 
-Node.js 22 이상을 사용한다(24 LTS 권장). Windows PowerShell에서 실행 정책으로 `npm`이 차단되면 `npm.cmd`를 사용한다.
+Node.js 22.x는 22.12 이상, 또는 24 이상을 사용한다(24 LTS 권장). Windows PowerShell에서 실행 정책으로 `npm`이 차단되면 `npm.cmd`를 사용한다.
 
 ```bash
 npm install
@@ -81,6 +81,7 @@ npm run dev     # 개발 서버
 npm run build
 npm run lint
 npm run typecheck
+npm run test    # 설정·인증·쿠키 경계 테스트 (외부 서비스 호출 없음)
 npm run start   # 빌드한 앱 실행
 ```
 
