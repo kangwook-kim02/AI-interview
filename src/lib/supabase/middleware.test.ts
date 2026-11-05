@@ -38,7 +38,7 @@ describe("세션 갱신", () => {
       return { data: null, error: null };
     });
 
-    const response = await updateSupabaseSession(request);
+    const { response } = await updateSupabaseSession(request);
 
     expect(request.cookies.get("auth")?.value).toBe("refreshed");
     expect(response.cookies.get("auth")).toMatchObject({
@@ -52,11 +52,22 @@ describe("세션 갱신", () => {
     expect(getClaims).toHaveBeenCalledOnce();
   });
 
-  it("무효 인증은 로그인으로 신뢰하지 않으며 로그인 가드는 추가하지 않는다", async () => {
+  it("무효 인증은 로그인으로 신뢰하지 않으며 어댑터가 리다이렉트를 넣지 않는다", async () => {
     getClaims.mockResolvedValueOnce({ data: null, error: new AuthApiError("Invalid JWT", 401, undefined) });
-    const response = await updateSupabaseSession(new NextRequest("https://app.test/dashboard"));
+    const { response, isAuthenticated } = await updateSupabaseSession(
+      new NextRequest("https://app.test/dashboard"),
+    );
+    expect(isAuthenticated).toBe(false);
     expect(response.headers.get("location")).toBeNull();
     expect(response.status).toBe(200);
+  });
+
+  it("유효한 클레임이 있으면 인증됨으로 보고한다", async () => {
+    getClaims.mockResolvedValueOnce({ data: { claims: { sub: "user-1" } }, error: null });
+    const { isAuthenticated } = await updateSupabaseSession(
+      new NextRequest("https://app.test/dashboard"),
+    );
+    expect(isAuthenticated).toBe(true);
   });
 
   it("서비스 장애를 조용히 비로그인으로 처리하지 않는다", async () => {
