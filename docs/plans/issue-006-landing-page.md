@@ -82,4 +82,7 @@ frontend-design 시스템(따뜻·친근·라이트·단순함, 코랄 CTA)을 �
 
 ## (구현 후) 변경 메모 / 리뷰 반영
 
-<!-- 구현·리뷰 중 계획과 달라진 점을 여기에 덧붙인다 -->
+- 섹션은 계획대로 `features/landing/components/`에 분리. 헤더·히어로 공유 CTA는 `CtaLink`로 추출.
+- 히어로 장식은 외부 에셋 없이 인라인 SVG/토큰 블록(`HeroArt`, `aria-hidden`)으로 구현 — 질문↔답변·파형·진행 모티프.
+- reviewer 리뷰 결과 **must-fix 없음**. nice-to-have 중 "랜딩 전용 metadata"(플랜 step 7)를 반영해
+  `page.tsx`에 `metadata`(title/description) 추가. 나머지 제안(CtaLink/Button 톤 중복 등)은 과수정 방지로 보류.
