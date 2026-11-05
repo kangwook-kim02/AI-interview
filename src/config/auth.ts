@@ -12,6 +12,9 @@ export const AUTH_REDIRECT_PATH = "/dashboard";
 /** 미인증 사용자를 보낼 로그인 경로. */
 export const LOGIN_PATH = "/login";
 
+/** 회원가입 경로. 랜딩 CTA 등에서 공유한다. */
+export const SIGNUP_PATH = "/signup";
+
 /** 미인증 시 로그인을 요구하는 보호 경로 접두사. */
 export const PROTECTED_PATH_PREFIXES = [
   "/dashboard",

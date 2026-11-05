@@ -1,21 +1,36 @@
-import { MAIN_QUESTION_COUNT } from "@/config/interview";
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { AUTH_REDIRECT_PATH } from "@/config/auth";
+import { Features } from "@/features/landing/components/Features";
+import { Hero } from "@/features/landing/components/Hero";
+import { HowItWorks } from "@/features/landing/components/HowItWorks";
+import { LandingHeader } from "@/features/landing/components/LandingHeader";
+import { getCurrentUser } from "@/lib/supabase/session";
 
-export default function HomePage() {
+export const metadata: Metadata = {
+  title: "AI 면접 · 나의 이야기로 시작하는 면접 연습",
+  description:
+    "자기소개서를 바탕으로 AI가 맞춤 질문을 만들어요. 소리 내어 답하며 차분하게 면접을 연습해요.",
+};
+
+export default async function HomePage() {
+  // 이미 로그인한 사용자는 랜딩 대신 대시보드로 보낸다. (FR-LAND-6)
+  const user = await getCurrentUser();
+  if (user) redirect(AUTH_REDIRECT_PATH);
+
   return (
-    <main className="flex min-h-svh items-center px-6 py-16 sm:px-10">
-      <div className="mx-auto w-full max-w-2xl">
-        <p className="mb-6 text-sm font-semibold">AI 면접</p>
-        <h1 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
-          나의 이야기로 시작하는
-          <br />
-          면접 연습.
-        </h1>
-        <p className="mt-6 max-w-lg text-base leading-relaxed text-muted sm:text-lg">
-          자기소개서를 바탕으로 한 {MAIN_QUESTION_COUNT}개의 질문으로,
-          <br className="hidden sm:block" />
-          나의 경험을 차분하게 말하는 연습을 해요.
-        </p>
-      </div>
-    </main>
+    <div className="flex min-h-svh flex-col">
+      <LandingHeader />
+      <main className="flex-1">
+        <Hero />
+        <Features />
+        <HowItWorks />
+      </main>
+      <footer className="border-t border-line">
+        <div className="mx-auto w-full max-w-5xl px-6 py-8">
+          <p className="text-sm text-muted">AI 면접 — 혼자서도 든든한 면접 연습.</p>
+        </div>
+      </footer>
+    </div>
   );
 }
