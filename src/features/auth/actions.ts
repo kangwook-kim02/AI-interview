@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { AUTH_REDIRECT_PATH, LOGIN_PATH } from "@/config/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { authErrorToMessage } from "./messages";
+import { authErrorToMessage, DUPLICATE_EMAIL_MESSAGE } from "./messages";
 import { loginSchema, signupSchema } from "./schema";
 
 /** useActionState가 주고받는 폼 상태. error=오류, notice=안내(예: 확인 메일). */
@@ -54,7 +54,7 @@ export async function signUp(
   // 이메일 확인이 켜진 프로젝트에서 이미 가입된 주소는
   // 열거 방지를 위해 identities가 빈 가짜 사용자로 반환된다.
   if (data.user && data.user.identities?.length === 0) {
-    return { error: "이미 가입된 이메일이에요. 로그인해 주세요." };
+    return { error: DUPLICATE_EMAIL_MESSAGE };
   }
 
   // 세션이 바로 생기면(확인 불필요) 로그인 상태로 대시보드 이동,

@@ -109,4 +109,11 @@
 
 ## (구현 후) 변경 메모 / 리뷰 반영
 
-<!-- 구현 중 계획과 달라진 점, 리뷰 반영 내역을 여기에 덧붙인다. -->
+- `interview/layout.tsx`는 생성하지 않음 — 해당 라우트가 아직 없어 middleware(`/interview/:path*`)가 보호를 커버. 페이지 생기는 이슈에서 서버 가드 추가 예정.
+- 보호 경로 판단은 `src/features/auth/guard.ts`의 순수 함수 `resolveAuthRedirect`/`isProtectedPath`로 분리해 테스트.
+
+### reviewer 반영 (must-fix 없음, nice-to-have 반영)
+- (경계) `messages.ts`가 `@supabase/*`를 직접 import 하던 것을 제거. SDK 타입가드는 `lib/supabase/errors.ts`의 `getAuthErrorInfo`로 옮기고 features는 code/status만 받아 매핑 → 어댑터 경계 정리.
+- (DRY) 중복 가입 안내 문구를 `messages.ts`의 `DUPLICATE_EMAIL_MESSAGE` 상수로 단일화해 `actions.ts`에서 재사용.
+- (중복 호출) 대시보드 `page.tsx`에서 `getCurrentUser()` 재호출 제거 — 레이아웃 가드가 세션을 보장하므로 페이지는 조회 없이 표시만.
+- (미반영/인지) 가입 중복 판별이 Supabase "Confirm email" 설정에 일부 의존(`identities: []`)하나, 설정 OFF 시 `user_already_exists` 코드로도 커버됨. 서버 컴포넌트 throw용 error boundary는 범위 밖(후속 이슈).
