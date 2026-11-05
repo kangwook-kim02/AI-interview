@@ -34,8 +34,8 @@ export async function updateSupabaseSession(request: NextRequest) {
     },
   });
 
-  const { error } = await supabase.auth.getClaims();
+  const { data, error } = await supabase.auth.getClaims();
   if (error && !isUnauthenticatedError(error)) throw error;
 
-  return response;
+  return { response, isAuthenticated: Boolean(data?.claims) };
 }
