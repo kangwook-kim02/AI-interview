@@ -130,6 +130,7 @@ npx supabase@3.0.0 db push --remote --skip-vault
 ```bash
 psql -X -v ON_ERROR_STOP=1 -f supabase/tests/ownership.sql
 psql -X -v ON_ERROR_STOP=1 -f supabase/tests/cover-letter-create.sql
+psql -X -v ON_ERROR_STOP=1 -f supabase/tests/cover-letter-edit-delete.sql
 ```
 
 테스트는 트랜잭션 안에서 별도 `auth.users` 두 행을 만든다. 각 계정의 JWT `sub`를 설정하고
@@ -140,6 +141,9 @@ psql -X -v ON_ERROR_STOP=1 -f supabase/tests/cover-letter-create.sql
 
 `cover-letter-create.sql`은 생성 RPC의 필수 입력·익명 요청·소유자 위조 거부, 저장 후 문항/경험 순서,
 경험 0개, 계정 격리와 자식 INSERT 실패 시 회사·문항·경험 전체 롤백을 검사한다.
+
+`cover-letter-edit-delete.sql`은 수정 RPC의 인증·소유권·입력 검증, 순서/추가/삭제 저장,
+자식 INSERT 실패 시 원본 전체 유지, 카드 삭제 cascade 및 타 계정 데이터 유지를 검사한다.
 
 확인 범위:
 
@@ -159,8 +163,10 @@ psql -X -v ON_ERROR_STOP=1 -f supabase/tests/cover-letter-create.sql
 psql -X -v ON_ERROR_STOP=1 -f supabase/tests/bootstrap.sql
 psql -X -v ON_ERROR_STOP=1 -1 -f supabase/migrations/20261104000000_create_interview_schema.sql
 psql -X -v ON_ERROR_STOP=1 -1 -f supabase/migrations/20261106000000_create_cover_letter_rpc.sql
+psql -X -v ON_ERROR_STOP=1 -1 -f supabase/migrations/20261106010000_update_cover_letter_rpc.sql
 psql -X -v ON_ERROR_STOP=1 -f supabase/tests/ownership.sql
 psql -X -v ON_ERROR_STOP=1 -f supabase/tests/cover-letter-create.sql
+psql -X -v ON_ERROR_STOP=1 -f supabase/tests/cover-letter-edit-delete.sql
 ```
 
 CLI 로그인 상태에서는 같은 SQL 검사를 원격 프로젝트에서 실행할 수 있다.

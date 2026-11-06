@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { unstable_rethrow } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useActionState, useId, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,9 +21,11 @@ import {
   coverLetterSchema,
   coverLetterValidationState,
   type CoverLetterInput,
-  type CoverLetterActionState,
+  type CoverLetterDetail,
+  type CoverLetterFeedback,
 } from "@/types/cover-letter";
-import { createCoverLetter } from "../actions";
+import { persistCoverLetter } from "../api-client";
+import { DeleteCoverLetterButton } from "./DeleteCoverLetterButton";
 
 type Essay = CoverLetterInput["essays"][number] & { key: string };
 type Experience = CoverLetterInput["experiences"][number] & { key: string };
@@ -59,28 +61,36 @@ function Field({
   );
 }
 
-export function CoverLetterForm() {
+export function CoverLetterForm({ initialValue }: { initialValue?: CoverLetterDetail }) {
+  const router = useRouter();
   const prefix = useId();
-  const [companyName, setCompanyName] = useState("");
-  const [jobTitle, setJobTitle] = useState("");
-  const [essays, setEssays] = useState<Essay[]>([{ key: "first", question: "", answer: "" }]);
-  const [experiences, setExperiences] = useState<Experience[]>([]);
+  const [companyName, setCompanyName] = useState(initialValue?.companyName ?? "");
+  const [jobTitle, setJobTitle] = useState(initialValue?.jobTitle ?? "");
+  const [essays, setEssays] = useState<Essay[]>(() =>
+    initialValue?.essays.length
+      ? initialValue.essays.map((essay, index) => ({ ...essay, key: `essay-${index}` }))
+      : [{ key: "first", question: "", answer: "" }],
+  );
+  const [experiences, setExperiences] = useState<Experience[]>(
+    () =>
+      initialValue?.experiences.map((experience, index) => ({
+        ...experience,
+        key: `experience-${index}`,
+      })) ?? [],
+  );
+  const [deleting, setDeleting] = useState(false);
   const [edited, setEdited] = useState(false);
   const [announcement, setAnnouncement] = useState("");
-  const [state, formAction, pending] = useActionState<CoverLetterActionState, FormData>(
-    async (previous, formData) => {
+  const [state, formAction, pending] = useActionState<CoverLetterFeedback, FormData>(
+    async (_previous, formData) => {
       setEdited(false);
       const parsed = coverLetterSchema.safeParse(JSON.parse(String(formData.get("payload"))));
       if (!parsed.success) return coverLetterValidationState(parsed.error);
-      try {
-        return await createCoverLetter(previous, formData);
-      } catch (error) {
-        // 성공 리다이렉트는 Next에 맡기고, 전송 오류만 폼 안에서 안내한다.
-        unstable_rethrow(error);
-        return {
-          error: "서버 응답을 받지 못했어요. 작성한 내용은 그대로예요. 연결을 확인해 주세요.",
-        };
-      }
+      const result = await persistCoverLetter(parsed.data, initialValue?.id);
+      if (!result.ok) return result.feedback;
+      router.replace(AUTH_REDIRECT_PATH);
+      router.refresh();
+      return {};
     },
     {},
   );
@@ -105,9 +115,13 @@ export function CoverLetterForm() {
       <Link href={AUTH_REDIRECT_PATH} className="text-sm font-semibold text-accent hover:underline">
         ← 대시보드
       </Link>
-      <h1 className="mt-6 text-2xl font-bold sm:text-3xl">어떤 이야기를 준비하셨나요?</h1>
+      <h1 className="mt-6 text-2xl font-bold sm:text-3xl">
+        {initialValue ? "준비한 이야기를 다듬어 볼까요?" : "어떤 이야기를 준비하셨나요?"}
+      </h1>
       <p className="mt-3 text-muted">
-        지원할 회사와 자소서를 알려 주세요. 면접 연습의 바탕이 돼요.
+        {initialValue
+          ? "달라진 경험과 생각을 담아, 다음 연습을 준비해 보세요."
+          : "지원할 회사와 자소서를 알려 주세요. 면접 연습의 바탕이 돼요."}
       </p>
 
       <form action={formAction} noValidate className="mt-10" onChange={edit} aria-busy={pending}>
@@ -116,7 +130,7 @@ export function CoverLetterForm() {
           name="payload"
           value={JSON.stringify({ companyName, jobTitle, essays, experiences })}
         />
-        <fieldset disabled={pending} className="min-w-0 space-y-10">
+        <fieldset disabled={pending || deleting} className="min-w-0 space-y-10">
           <section aria-labelledby={`${prefix}-company`}>
             <h2 id={`${prefix}-company`} className="text-lg font-bold">
               지원 정보
@@ -362,7 +376,11 @@ export function CoverLetterForm() {
               </p>
             )}
             <Button type="submit" className="w-full sm:w-auto" disabled={pending}>
-              {pending ? "저장하고 있어요…" : "자소서 저장하기"}
+              {pending
+                ? "저장하고 있어요…"
+                : initialValue
+                  ? "변경 내용 저장하기"
+                  : "자소서 저장하기"}
             </Button>
           </div>
         </fieldset>
@@ -370,6 +388,14 @@ export function CoverLetterForm() {
           {pending ? "저장 중이에요." : announcement}
         </p>
       </form>
+      {initialValue && (
+        <DeleteCoverLetterButton
+          id={initialValue.id}
+          companyName={initialValue.companyName}
+          disabled={pending}
+          onPendingChange={setDeleting}
+        />
+      )}
     </div>
   );
 }

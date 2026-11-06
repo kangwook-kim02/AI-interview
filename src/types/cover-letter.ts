@@ -40,17 +40,25 @@ export const coverLetterSchema = z.object({
 });
 
 export type CoverLetterInput = z.infer<typeof coverLetterSchema>;
+export const coverLetterIdSchema = z.uuid();
+export type CoverLetterDetail = Pick<Tables<"cover_letters">, "id"> & CoverLetterInput;
 export type CoverLetterSummary = Pick<
   Tables<"cover_letters">,
   "id" | "company_name" | "job_title" | "created_at"
 > & { essayCount: number };
 
-export type CoverLetterActionState = {
+export type CoverLetterFeedback = {
   error?: string;
   fieldErrors?: Record<string, string>;
 };
 
-export function coverLetterValidationState(error: z.ZodError): CoverLetterActionState {
+export const coverLetterApiErrorSchema = z.object({
+  error: z.string(),
+  fieldErrors: z.record(z.string(), z.string()).optional(),
+});
+export const coverLetterMutationSchema = z.object({ id: coverLetterIdSchema });
+
+export function coverLetterValidationState(error: z.ZodError): CoverLetterFeedback {
   return {
     error: "입력 내용을 확인해 주세요. 작성한 내용은 그대로 남아 있어요.",
     fieldErrors: Object.fromEntries(
