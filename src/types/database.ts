@@ -1,4 +1,4 @@
-﻿export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
@@ -17,6 +17,7 @@ export type Database = {
           updated_at: string;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           company_name: string;
           created_at?: string;
@@ -44,6 +45,7 @@ export type Database = {
           position: number;
           question: string;
         };
+        ComputedFields: never;
         Insert: {
           answer?: string;
           cover_letter_id: string;
@@ -78,6 +80,7 @@ export type Database = {
           id: string;
           position: number;
         };
+        ComputedFields: never;
         Insert: {
           content: string;
           cover_letter_id: string;
@@ -115,6 +118,7 @@ export type Database = {
           question_text: string;
           type: string;
         };
+        ComputedFields: never;
         Insert: {
           answer_audio_path?: string | null;
           answer_transcript?: string | null;
@@ -168,6 +172,7 @@ export type Database = {
           status: string;
           user_id: string;
         };
+        ComputedFields: never;
         Insert: {
           cover_letter_id: string;
           created_at?: string;
@@ -205,7 +210,16 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      create_cover_letter: {
+        Args: {
+          company_name: string;
+          essays: Json;
+          expected_user_id: string;
+          experiences: Json;
+          job_title: string;
+        };
+        Returns: string;
+      };
     };
     Enums: {
       [_ in never]: never;
