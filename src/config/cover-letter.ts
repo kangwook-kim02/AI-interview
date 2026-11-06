@@ -1,0 +1,9 @@
+export const NEW_COVER_LETTER_PATH = "/dashboard/cover-letters/new";
+export const MIN_ESSAY_ITEMS = 1;
+export const MAX_ESSAY_ITEMS = 20;
+export const MAX_EXPERIENCES = 20;
+export const COMPANY_NAME_MAX_LENGTH = 100;
+export const JOB_TITLE_MAX_LENGTH = 100;
+export const ESSAY_QUESTION_MAX_LENGTH = 1_000;
+export const ESSAY_ANSWER_MAX_LENGTH = 5_000;
+export const EXPERIENCE_MAX_LENGTH = 3_000;

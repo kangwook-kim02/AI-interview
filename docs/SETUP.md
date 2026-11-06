@@ -89,8 +89,18 @@ node --env-file=.env.local --input-type=module -e "const r = await fetch(new URL
 ### B.2 DB 마이그레이션·RLS·생성 타입
 
 `supabase/migrations/20261104000000_create_interview_schema.sql`에 자소서·문항·경험·면접·질문
-테이블, 인덱스, RLS와 `updated_at` 트리거가 있다. 화면과 CRUD 액션은 후속 이슈에서 구현한다.
+테이블, 인덱스, RLS와 `updated_at` 트리거가 있다.
 `recording_path`와 `answer_audio_path`는 선택값이므로 영상/오디오 없이 기록을 저장할 수 있다.
+
+`20261106000000_create_cover_letter_rpc.sql`은 자소서·문항·경험을 함께 저장하는
+`create_cover_letter` 함수를 추가한다. `/dashboard/cover-letters/new` 작성 화면을 사용하기 전에
+이 migration도 적용해야 한다. 사용자 세션과 Publishable key를 사용하며 관리자 Secret key는 필요 없다.
+함수는 호출자 권한(`SECURITY INVOKER`)과 기존 RLS를 유지하고, 검증된 사용자와 JWT 주체가
+일치할 때만 생성한다. 자식 저장이 실패하면 전체 호출이 롤백된다.
+공식 안내: [Database functions](https://supabase.com/docs/guides/database/functions).
+
+폼·서버의 공유 입력 상한은 `src/config/cover-letter.ts`에서 관리한다. 회사명·직무 각 100자,
+문항 최대 20개(질문 1,000자·답변 5,000자), 경험 최대 20개(각 3,000자)를 허용한다.
 
 #### Supabase 프로젝트에 적용
 
@@ -119,6 +129,7 @@ npx supabase@3.0.0 db push --remote --skip-vault
 
 ```bash
 psql -X -v ON_ERROR_STOP=1 -f supabase/tests/ownership.sql
+psql -X -v ON_ERROR_STOP=1 -f supabase/tests/cover-letter-create.sql
 ```
 
 테스트는 트랜잭션 안에서 별도 `auth.users` 두 행을 만든다. 각 계정의 JWT `sub`를 설정하고
@@ -126,6 +137,9 @@ psql -X -v ON_ERROR_STOP=1 -f supabase/tests/ownership.sql
 검사 함수는 모두 호출자 권한으로 실행하며, 데이터 접근 검사에 관리자/RLS 우회 권한을 사용하지 않는다.
 성공하면 `PASS` 알림 뒤 `ROLLBACK`하고, assertion 실패 시 명령은 0이 아닌 종료 코드를 반환한다.
 테스트 fixture와 임시 함수는 연결 종료 후 남지 않는다.
+
+`cover-letter-create.sql`은 생성 RPC의 필수 입력·익명 요청·소유자 위조 거부, 저장 후 문항/경험 순서,
+경험 0개, 계정 격리와 자식 INSERT 실패 시 회사·문항·경험 전체 롤백을 검사한다.
 
 확인 범위:
 
@@ -144,7 +158,9 @@ psql -X -v ON_ERROR_STOP=1 -f supabase/tests/ownership.sql
 ```bash
 psql -X -v ON_ERROR_STOP=1 -f supabase/tests/bootstrap.sql
 psql -X -v ON_ERROR_STOP=1 -1 -f supabase/migrations/20261104000000_create_interview_schema.sql
+psql -X -v ON_ERROR_STOP=1 -1 -f supabase/migrations/20261106000000_create_cover_letter_rpc.sql
 psql -X -v ON_ERROR_STOP=1 -f supabase/tests/ownership.sql
+psql -X -v ON_ERROR_STOP=1 -f supabase/tests/cover-letter-create.sql
 ```
 
 CLI 로그인 상태에서는 같은 SQL 검사를 원격 프로젝트에서 실행할 수 있다.
@@ -201,9 +217,10 @@ if ($LASTEXITCODE -ne 0) { throw 'DB 타입 포맷 실패' }
 `'--remote=postgresql://postgres@127.0.0.1:55433/postgres?sslmode=disable'`
 로컬 예시의 TLS 비활성화는 해당 일회용 loopback 연결에만 사용한다.
 
-현재 타입은 migration을 적용한 **원격 Supabase PostgreSQL 17.11**에서
-**Supabase CLI 3.0.0**으로 생성하고 `oxfmt@0.66.0`으로 포맷했다.
-초기 로컬 PostgreSQL 18.6 및 공식 `@supabase/postgres-meta@0.100.0`의 생성 결과도 확인했다.
+현재 타입은 두 migration을 적용한 **일회용 로컬 PostgreSQL 18.6**에서
+공식 `@supabase/postgres-meta@0.100.0`으로 생성하고 `oxfmt@0.66.0`으로 포맷했다.
+PostgREST 버전은 기존 프로젝트의 `14.18`로 지정했다.
+이전 타입은 원격 Supabase PostgreSQL 17.11에서 Supabase CLI 3.0.0으로 생성했다.
 CLI/서버 생성기 버전에 따라 포맷이나 보조 타입이
 달라질 수 있으므로 재생성 diff와 `npm run typecheck`를 함께 확인한다.
 공식 안내: [생성 타입](https://supabase.com/docs/guides/api/rest/generating-types).
