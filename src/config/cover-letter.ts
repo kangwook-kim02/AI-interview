@@ -1,4 +1,6 @@
 export const NEW_COVER_LETTER_PATH = "/dashboard/cover-letters/new";
+export const COVER_LETTER_DATE_LOCALE = "ko-KR";
+export const COVER_LETTER_DATE_TIME_ZONE = "Asia/Seoul";
 export const MIN_ESSAY_ITEMS = 1;
 export const MAX_ESSAY_ITEMS = 20;
 export const MAX_EXPERIENCES = 20;
