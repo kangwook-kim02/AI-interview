@@ -103,7 +103,7 @@ AI-interview/
 │  │  ├─ cover-letter/
 │  │  │  ├─ components/            # CoverLetterForm, EssayItemRow, ExperienceRow, Card
 │  │  │  ├─ hooks/
-│  │  │  └─ actions.ts             # Server Actions (CRUD)
+│  │  │  └─ handlers.ts            # 자소서 REST 핸들러 (CRUD)
 │  │  └─ interview/
 │  │     ├─ components/            # CameraView, QATranscript, ProgressBar, Timer, AnswerControls
 │  │     ├─ hooks/                 # useInterviewSession, useRecorder, useSpeech
@@ -363,10 +363,12 @@ idle
 |---|---|---|---|---|
 | POST | `/api/interview/questions` | `{ coverLetterId }` | `{ interviewId, questions: string[] }` | 면접 생성 + 메인 질문 4개 |
 | POST | `/api/interview/follow-up` | `{ interviewId, questionId, answerTranscript }` | `{ followUp: string \| null }` | 꼬리질문 판단 |
-| POST (또는 Server Action) | 자소서 CRUD | — | — | `features/cover-letter/actions.ts` |
+| GET / POST | `/api/cover-letters` | 생성 시 자소서 JSON | `{ coverLetters }` / `{ id }` | 본인 목록 / 생성 |
+| GET / PATCH / DELETE | `/api/cover-letters/{id}` | 수정 시 자소서 JSON | `{ coverLetter }` / `{ id }` / 204 | 본인 상세 / 수정 / 삭제 |
 
 - 인증: 모든 API는 서버 Supabase 클라이언트로 세션 검증 후 소유권 확인.
 - 입출력은 Zod 스키마로 검증(클라이언트와 타입 공유).
+- 자소서 REST의 입력·오류·배열 교체 계약은 [API.md](./API.md) 참조. `app/api`는 feature 핸들러 재수출만 담당한다.
 
 ---
 

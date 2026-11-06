@@ -1,21 +1,51 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getCoverLetterDashboard } from "./queries";
+import { getCoverLetterDashboard, getCoverLetterForEdit } from "./queries";
 
-const { getCurrentUser, listCoverLetters, redirect } = vi.hoisted(() => ({
-  getCurrentUser: vi.fn(),
-  listCoverLetters: vi.fn(),
-  redirect: vi.fn((path: string) => {
-    throw new Error(`REDIRECT:${path}`);
+const { getCurrentUser, listCoverLetters, findCoverLetter, notFound, redirect } = vi.hoisted(
+  () => ({
+    getCurrentUser: vi.fn(),
+    listCoverLetters: vi.fn(),
+    findCoverLetter: vi.fn(),
+    notFound: vi.fn(() => {
+      throw new Error("NOT_FOUND");
+    }),
+    redirect: vi.fn((path: string) => {
+      throw new Error(`REDIRECT:${path}`);
+    }),
   }),
-}));
+);
 vi.mock("server-only", () => ({}));
-vi.mock("next/navigation", () => ({ redirect }));
+vi.mock("next/navigation", () => ({ redirect, notFound }));
 vi.mock("@/lib/supabase/session", () => ({ getCurrentUser }));
-vi.mock("@/lib/supabase/cover-letters", () => ({ listCoverLetters }));
+vi.mock("@/lib/supabase/cover-letters", () => ({ listCoverLetters, findCoverLetter }));
 
 beforeEach(() => {
   getCurrentUser.mockReset().mockResolvedValue({ id: "verified-user" });
   listCoverLetters.mockReset().mockResolvedValue([]);
+  findCoverLetter.mockReset().mockResolvedValue(null);
+});
+
+describe("getCoverLetterForEdit", () => {
+  const id = "c0090000-0000-4000-8000-000000000001";
+  it("비로그인 요청은 상세 조회 없이 로그인으로 보낸다", async () => {
+    getCurrentUser.mockResolvedValueOnce(null);
+    await expect(getCoverLetterForEdit(id)).rejects.toThrow("REDIRECT:/login");
+    expect(findCoverLetter).not.toHaveBeenCalled();
+  });
+  it("잘못된 ID·없는 카드·타인 카드는 같은 not-found 처리한다", async () => {
+    await expect(getCoverLetterForEdit("bad-id")).rejects.toThrow("NOT_FOUND");
+    expect(findCoverLetter).not.toHaveBeenCalled();
+    await expect(getCoverLetterForEdit(id)).rejects.toThrow("NOT_FOUND");
+    expect(findCoverLetter).toHaveBeenCalledWith(id, "verified-user");
+  });
+  it("본인 상세를 반환하고 조회 오류는 not-found와 구별한다", async () => {
+    const detail = { id, companyName: "회사", jobTitle: "직무", essays: [], experiences: [] };
+    findCoverLetter.mockResolvedValueOnce(detail);
+    expect(await getCoverLetterForEdit(id)).toEqual({ status: "success", coverLetter: detail });
+    findCoverLetter.mockRejectedValueOnce(new Error("private DB error"));
+    expect(await getCoverLetterForEdit(id)).toEqual({ status: "error" });
+    expect(notFound).not.toHaveBeenCalled();
+  });
 });
 
 describe("getCoverLetterDashboard", () => {

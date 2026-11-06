@@ -220,6 +220,17 @@ export type Database = {
         };
         Returns: string;
       };
+      update_cover_letter: {
+        Args: {
+          company_name: string;
+          essays: Json;
+          expected_user_id: string;
+          experiences: Json;
+          job_title: string;
+          target_cover_letter_id: string;
+        };
+        Returns: string;
+      };
     };
     Enums: {
       [_ in never]: never;

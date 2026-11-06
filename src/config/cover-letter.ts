@@ -1,4 +1,8 @@
 export const NEW_COVER_LETTER_PATH = "/dashboard/cover-letters/new";
+export const getCoverLetterEditPath = (id: string) => `/dashboard/cover-letters/${id}/edit`;
+export const COVER_LETTERS_API_PATH = "/api/cover-letters";
+export const getCoverLetterApiPath = (id: string) =>
+  `${COVER_LETTERS_API_PATH}/${encodeURIComponent(id)}`;
 export const COVER_LETTER_DATE_LOCALE = "ko-KR";
 export const COVER_LETTER_DATE_TIME_ZONE = "Asia/Seoul";
 export const MIN_ESSAY_ITEMS = 1;

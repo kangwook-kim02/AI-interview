@@ -1,10 +1,14 @@
 import "server-only";
 
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { LOGIN_PATH } from "@/config/auth";
-import { listCoverLetters } from "@/lib/supabase/cover-letters";
+import { findCoverLetter, listCoverLetters } from "@/lib/supabase/cover-letters";
 import { getCurrentUser } from "@/lib/supabase/session";
-import type { CoverLetterSummary } from "@/types/cover-letter";
+import {
+  coverLetterIdSchema,
+  type CoverLetterDetail,
+  type CoverLetterSummary,
+} from "@/types/cover-letter";
 
 export type CoverLetterDashboardResult =
   | { status: "success"; coverLetters: CoverLetterSummary[] }
@@ -20,4 +24,20 @@ export async function getCoverLetterDashboard(): Promise<CoverLetterDashboardRes
   } catch {
     return { status: "error" };
   }
+}
+
+export async function getCoverLetterForEdit(
+  id: string,
+): Promise<{ status: "success"; coverLetter: CoverLetterDetail } | { status: "error" }> {
+  const user = await getCurrentUser();
+  if (!user) redirect(LOGIN_PATH);
+  if (!coverLetterIdSchema.safeParse(id).success) notFound();
+  let coverLetter: CoverLetterDetail | null;
+  try {
+    coverLetter = await findCoverLetter(id, user.id);
+  } catch {
+    return { status: "error" };
+  }
+  if (!coverLetter) notFound();
+  return { status: "success", coverLetter };
 }
