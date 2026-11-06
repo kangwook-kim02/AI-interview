@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { Tables } from "@/types/database";
 import {
   COMPANY_NAME_MAX_LENGTH,
   JOB_TITLE_MAX_LENGTH,
@@ -39,6 +40,11 @@ export const coverLetterSchema = z.object({
 });
 
 export type CoverLetterInput = z.infer<typeof coverLetterSchema>;
+export type CoverLetterSummary = Pick<
+  Tables<"cover_letters">,
+  "id" | "company_name" | "job_title" | "created_at"
+> & { essayCount: number };
+
 export type CoverLetterActionState = {
   error?: string;
   fieldErrors?: Record<string, string>;
