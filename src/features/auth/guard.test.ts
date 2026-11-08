@@ -7,7 +7,6 @@ describe("보호 경로 판단", () => {
     "/dashboard/cover-letters/new",
     "/interview/123/prepare",
     "/interview/123/abc/result",
-    "/api/interview/questions",
   ])("보호 경로를 인식한다 (%s)", (path) => {
     expect(isProtectedPath(path)).toBe(true);
   });
@@ -31,5 +30,9 @@ describe("미인증 리다이렉트 결정", () => {
 
   it("공개 경로는 미인증이어도 통과시킨다", () => {
     expect(resolveAuthRedirect("/login", false)).toBeNull();
+  });
+
+  it("면접 API는 JSON 401 처리를 위해 로그인 페이지로 이동시키지 않는다", () => {
+    expect(resolveAuthRedirect("/api/interview/questions", false)).toBeNull();
   });
 });

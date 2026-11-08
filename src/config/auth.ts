@@ -15,9 +15,8 @@ export const LOGIN_PATH = "/login";
 /** 회원가입 경로. 랜딩 CTA 등에서 공유한다. */
 export const SIGNUP_PATH = "/signup";
 
-/** 미인증 시 로그인을 요구하는 보호 경로 접두사. */
+/** 미인증 시 로그인 화면으로 이동하는 페이지 경로. API는 핸들러에서 401을 반환한다. */
 export const PROTECTED_PATH_PREFIXES = [
   "/dashboard",
   "/interview",
-  "/api/interview",
 ] as const;
