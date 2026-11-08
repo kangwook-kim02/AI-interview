@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ANSWER_TRANSCRIPT_MAX_LENGTH, MAIN_QUESTION_COUNT } from "@/config/interview";
+import { ANSWER_TRANSCRIPT_MAX_LENGTH, MAIN_QUESTION_COUNT, MAX_FOLLOW_UPS } from "@/config/interview";
 
 export const startInterviewRequestSchema = z.strictObject({ coverLetterId: z.uuid() });
 export const interviewIdSchema = z.uuid();
@@ -22,3 +22,11 @@ export const followUpResponseSchema = z.strictObject({
 });
 export type FollowUpRequest = z.infer<typeof followUpRequestSchema>;
 export type FollowUpResponse = z.infer<typeof followUpResponseSchema>;
+
+export const interviewQuestionListSchema = z.strictObject({
+  questions: z.array(z.strictObject({
+    id: z.uuid(),
+    mainQuestionIndex: z.number().int().min(0).max(MAIN_QUESTION_COUNT - 1),
+    followUpIndex: z.number().int().min(0).max(MAX_FOLLOW_UPS),
+  })).min(MAIN_QUESTION_COUNT).max(MAIN_QUESTION_COUNT * (MAX_FOLLOW_UPS + 1)),
+});

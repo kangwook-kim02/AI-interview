@@ -10,7 +10,7 @@ export interface InterviewQuestionPosition {
 /**
  * Session IO boundary. Implementations call the server, never an LLM from the browser.
  * Resolve positions to stored question UUIDs before calling the follow-up REST API.
- * HTTP/UUID lookup wiring belongs to the interview screen integration (#17).
+ * The HTTP implementation resolves positions through the authenticated question-list API.
  */
 export interface InterviewSessionIO {
   start(coverLetterId: string, signal: AbortSignal): Promise<StartInterviewResponse>;

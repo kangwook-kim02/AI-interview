@@ -11,6 +11,17 @@ export const RECORDING_MIME = "video/webm";
 export const MIC_FFT_SIZE = 1024;
 export const MIC_SIGNAL_THRESHOLD = 0.015;
 export const MIC_LEVEL_SCALE = 5;
+export const INTERVIEW_TIMER_INTERVAL_MS = 1_000;
+export const MILLISECONDS_PER_SECOND = 1_000;
+export const SECONDS_PER_MINUTE = 60;
+
+export function getInterviewPath(coverLetterId: string) {
+  return `/interview/${encodeURIComponent(coverLetterId)}`;
+}
+
+export function getInterviewQuestionListPath(interviewId: string) {
+  return `/api/interview/${encodeURIComponent(interviewId)}/questions`;
+}
 
 export function getInterviewPreparePath(coverLetterId: string) {
   return `/interview/${encodeURIComponent(coverLetterId)}/prepare`;
