@@ -233,25 +233,60 @@ CLI/서버 생성기 버전에 따라 포맷이나 보조 타입이
 
 ---
 
-## C. LLM API 키 (provider 미지정 — 하나 선택)
+## C. LLM API 키 및 질문 생성 어댑터
 
-코드는 provider 중립이다. **아래 중 하나를 골라** 키를 발급하고, `.env.local`의
-`LLM_PROVIDER`에 provider 이름을, 해당 키 변수에 키를 넣는다.
+공개 계약은 provider 중립이며 현재 구현한 provider는 **OpenAI 하나**다.
+`.env.local`에 `LLM_PROVIDER=openai`와 `OPENAI_API_KEY`를 설정한다.
+기존 설정이 있으면 그대로 사용하고 키를 저장소나 로그에 남기지 않는다.
 
-### 옵션 1) Claude (Anthropic)
-- [ ] https://console.anthropic.com 가입
-- [ ] **결제 수단 등록 + 크레딧 충전** (API는 선불/종량제, 무료 크레딧 소진 후 과금)
-- [ ] **API Keys → Create Key** → 키 복사 → `.env.local`의 `ANTHROPIC_API_KEY`
-- [ ] `.env.local`에 `LLM_PROVIDER=claude`
-- [ ] (선택) 사용량 한도(spend limit) 설정으로 비용 상한 걸기
+- [ ] https://platform.openai.com 에서 API 키 발급 및 Billing 설정
+- [ ] `.env.local`에 `LLM_PROVIDER=openai`, `OPENAI_API_KEY` 입력
+- [ ] 선택적으로 `LLM_MODEL` 지정. 비워 두면 `src/config/ai.ts`의 `gpt-5.6-terra` 사용
 
-### 옵션 2) OpenAI (GPT)
-- [ ] https://platform.openai.com 가입
-- [ ] **결제 수단 등록 + 사용량 한도 설정** (Billing → Limits)
-- [ ] **API Keys → Create new secret key** → 키 복사 → `.env.local`의 `OPENAI_API_KEY`
-- [ ] `.env.local`에 `LLM_PROVIDER=openai`
+모델은 Responses API와 Structured Outputs를 지원해야 한다.
+기본 모델의 기능은 [공식 모델 문서](https://developers.openai.com/api/docs/models/gpt-5.6-terra)를 참고한다.
+다른 provider를 쓰려면 `src/lib/ai/providers/`에 같은 계약의 구현을 추가하고 팩토리에 연결한다.
+현재 `claude` 등은 `UNSUPPORTED_PROVIDER` 오류를 반환하며 `ANTHROPIC_API_KEY`는 사용하지 않는다.
 
-> 둘 다 발급해 두고 `LLM_PROVIDER`만 바꿔가며 비교해도 됨. 비용 상한(spend/usage limit)은 **반드시** 걸어두길 권장.
+서버 코드에서는 팩토리와 타입만 사용한다. `ctx`는 회사명·직무·자소서 문항/답변·경험을,
+꼬리질문 입력은 추가로 직전 질문·답변 전사·기존 꼬리질문 목록을 받는다.
+
+```ts
+import { getQuestionGenerator } from "@/lib/ai";
+import { MAIN_QUESTION_COUNT } from "@/config/interview";
+
+const generator = getQuestionGenerator();
+const questions = await generator.generateMainQuestions(ctx, MAIN_QUESTION_COUNT);
+const followUp = await generator.generateFollowUp({
+  ctx, question, answerTranscript, previousFollowUps,
+}); // string | null
+```
+
+설정·팩토리·provider 구현은 `server-only`로 보호한다. import 시점에는 키를 요구하지 않고
+팩토리 호출 시 설정을 검증한다. API 키는 브라우저나 `NEXT_PUBLIC_*`에 넣지 않는다.
+상위 코드에서 provider 구현을 직접 import하지 않는다.
+
+OpenAI Responses API에 strict JSON Schema를 전달하고 응답을 다시 Zod로 검증한다.
+요청한 개수와 정확히 일치하는 비공백 메인 질문 배열, 비공백 꼬리질문 또는 실제 null만 반환한다.
+한국어·중립 면접관 톤을 지시하며 사용자 입력은 지시문과 분리된 JSON 데이터로 전달한다.
+꼬리질문 강제 상한은 후속 면접 상태머신에서 처리한다.
+호출에는 `store:false`, `cache:no-store`, 60초 제한, 최대 출력 4,096토큰을 적용하며
+자동 재시도는 하지 않는다. [공식 구조화 응답 안내](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses) 참고.
+
+`QuestionGenerationError.code`로 오류를 구분하며 키·지원자 내용·provider 원문은 오류에 포함하지 않는다.
+
+| 코드 | 의미 |
+| --- | --- |
+| `NOT_CONFIGURED` | provider 또는 해당 키 누락/공백 |
+| `UNSUPPORTED_PROVIDER` | 구현하지 않은 provider 선택 |
+| `INVALID_INPUT` | 지원 맥락, 질문 개수, 꼬리질문 입력 오류 |
+| `EMPTY_RESPONSE` | HTTP 본문 또는 결과 텍스트가 비어 있음 |
+| `INVALID_RESPONSE` | JSON/개수/문자열/타입 오류, 거절 또는 불완전 응답 |
+| `PROVIDER_FAILURE` | HTTP·네트워크·본문 수신 실패 또는 provider 실패 상태 |
+| `TIMEOUT` | 제한 시간 초과 |
+
+`npm run test`는 fetch 대역으로 실행하므로 실제 키나 외부 호출이 필요 없다.
+실제 모델 호출 및 한국어 질문 품질은 별도 확인 대상이며, 이 이슈에는 면접 API·DB 연결이 포함되지 않는다.
 
 ---
 
