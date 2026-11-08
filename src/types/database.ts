@@ -105,6 +105,36 @@ export type Database = {
           },
         ];
       };
+      interview_follow_up_decisions: {
+        Row: {
+          answer_transcript: string;
+          follow_up: string | null;
+          interview_id: string;
+          question_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          answer_transcript: string;
+          follow_up?: string | null;
+          interview_id: string;
+          question_id: string;
+        };
+        Update: {
+          answer_transcript?: string;
+          follow_up?: string | null;
+          interview_id?: string;
+          question_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "interview_follow_up_decisions_question_id_interview_id_fkey";
+            columns: ["question_id", "interview_id"];
+            isOneToOne: false;
+            referencedRelation: "interview_questions";
+            referencedColumns: ["id", "interview_id"];
+          },
+        ];
+      };
       interview_questions: {
         Row: {
           answer_audio_path: string | null;
@@ -227,6 +257,16 @@ export type Database = {
           target_cover_letter_id: string;
         };
         Returns: string;
+      };
+      save_interview_follow_up: {
+        Args: {
+          answer: string;
+          expected_user_id: string;
+          generated_follow_up?: string;
+          source_question_id: string;
+          target_interview_id: string;
+        };
+        Returns: Json;
       };
       update_cover_letter: {
         Args: {
