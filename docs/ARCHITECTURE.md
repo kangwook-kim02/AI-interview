@@ -287,6 +287,8 @@ export function getQuestionGenerator(): QuestionGenerator {
 
 ### 5.2 음성 (`lib/speech/types.ts`)
 ```ts
+import type { STTHandlers, STTResult } from '@/lib/speech';
+
 export interface TTSPort {
   speak(text: string, opts?: { lang?: string }): Promise<void>; // 재생 끝나면 resolve
   cancel(): void;
@@ -294,16 +296,20 @@ export interface TTSPort {
 }
 
 export interface STTPort {
-  start(handlers: {
-    onInterim?: (text: string) => void;  // 실시간 중간 결과
-    onFinal: (text: string) => void;      // 최종 전사
-    onError?: (e: unknown) => void;
-  }): void;
-  stop(): void;        // 최종 결과 확정
+  start(handlers: STTHandlers): void; // 전체 초안 / 세션 최종 전사 / 구조화된 오류
+  stop(): Promise<STTResult>;        // 마지막 결과 + end 후 { transcript, empty }
+  cancel(): void;                    // 확정을 기다리지 않고 취소
   isSupported(): boolean;
 }
 ```
 → 구현: Web Speech. 추후 OpenAI TTS / Whisper 등으로 교체 가능.
+
+STT는 `createSTT()`로 생성한다. `onInterim`은 확정 조각과 현재 중간 조각을 합친
+전체 초안 스냅샷이며, `onFinal`은 정상 stop/end에서 확정 조각 전체를 한 번 전달한다.
+`no-speech`·권한·네트워크·예상치 않은 종료·timeout은 오류로 구별한다.
+오류에는 `code`, `message`, `partialTranscript`가 있으며 stop도 같은 오류로 거부한다.
+페이지의 pagehide는 자동 취소하며 SPA 이탈은 호출부가 cancel한다.
+구체 계약은 `src/lib/speech/types.ts`, 사용·검증 절차는 [SETUP.md](./SETUP.md)를 따른다.
 
 ### 5.3 녹화 (`lib/recording/media-recorder.ts`)
 ```ts
