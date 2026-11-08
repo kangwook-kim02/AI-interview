@@ -139,6 +139,7 @@ psql -X -v ON_ERROR_STOP=1 -f supabase/tests/ownership.sql
 psql -X -v ON_ERROR_STOP=1 -f supabase/tests/cover-letter-create.sql
 psql -X -v ON_ERROR_STOP=1 -f supabase/tests/cover-letter-edit-delete.sql
 psql -X -v ON_ERROR_STOP=1 -f supabase/tests/interview-create.sql
+psql -X -v ON_ERROR_STOP=1 -f supabase/tests/interview-follow-up.sql
 ```
 
 테스트는 트랜잭션 안에서 별도 `auth.users` 두 행을 만든다. 각 계정의 JWT `sub`를 설정하고
@@ -177,11 +178,31 @@ psql -X -v ON_ERROR_STOP=1 -1 -f supabase/migrations/20261104000000_create_inter
 psql -X -v ON_ERROR_STOP=1 -1 -f supabase/migrations/20261106000000_create_cover_letter_rpc.sql
 psql -X -v ON_ERROR_STOP=1 -1 -f supabase/migrations/20261106010000_update_cover_letter_rpc.sql
 psql -X -v ON_ERROR_STOP=1 -1 -f supabase/migrations/20261108000000_create_interview_rpc.sql
+psql -X -v ON_ERROR_STOP=1 -1 -f supabase/migrations/20261108010000_interview_follow_up.sql
 psql -X -v ON_ERROR_STOP=1 -f supabase/tests/ownership.sql
 psql -X -v ON_ERROR_STOP=1 -f supabase/tests/cover-letter-create.sql
 psql -X -v ON_ERROR_STOP=1 -f supabase/tests/cover-letter-edit-delete.sql
 psql -X -v ON_ERROR_STOP=1 -f supabase/tests/interview-create.sql
+psql -X -v ON_ERROR_STOP=1 -f supabase/tests/interview-follow-up.sql
 ```
+
+꼬리질문 검사는 판단/질문의 원자성·부모/순서·2개 상한·동일 답변/null 재시도·
+다른 답변 충돌·과거 질문·종료 세션·계정 격리를 확인한다. 신규 마이그레이션은 기존
+꼬리질문의 순서가 0..1이고 부모별 순서가 유일해야 적용된다. 위반 데이터는 먼저 확인한다.
+
+실제 두 연결의 잠금 경합은 `supabase/tests/interview-follow-up-concurrency.mjs`로 확인한다.
+`pg`가 설치된 별도 테스트 도구 디렉터리를 Node의 모듈 경로로 지정한다(앱 의존성에 추가할 필요 없음).
+bootstrap과 모든 마이그레이션을 적용한 **일회용 로컬 DB에서만** 실행한다. 임시 사용자와
+자소서를 만들고 finally에서 삭제하며 외부 AI 호출은 없다.
+
+```powershell
+$env:NODE_PATH = 'C:/path/to/test-tools/node_modules' # pg 패키지가 있는 경로
+$env:INTERVIEW_TEST_DB_URL = 'postgresql://postgres@127.0.0.1:55435/postgres'
+node supabase/tests/interview-follow-up-concurrency.mjs
+```
+
+같은 질문 동시 요청의 결과 재사용, 서로 다른 답변 거부, 2개 슬롯과 null 결정의 멱등성,
+종료 트랜잭션과 판단 저장 경합을 검사한다. DB의 실제 Lock 대기를 확인한 뒤 선행 연결을 커밋한다.
 
 CLI 로그인 상태에서는 같은 SQL 검사를 원격 프로젝트에서 실행할 수 있다.
 
