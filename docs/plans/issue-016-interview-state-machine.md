@@ -67,4 +67,13 @@ LLM·DB 구현을 클라이언트에 import하지 않으며 스키마·마이그
 
 ## (구현 후) 변경 메모 / 리뷰 반영
 
-구현 및 reviewer 리뷰 후 추가한다.
+- 계획대로 순수 상태머신, 세션별 Zustand store, 주입 IO controller와 훅을 구현했다.
+- 모든 비동기 결과에 operationId를 적용하고 오래된 사용자 완료/재시도 동작도 차단했다.
+- 상태머신·controller 29개 검증을 추가했다. 재시도 후 같은 transcribing 상태에 도착한
+  이전 stop 응답, 동기 cancel 오류 콜백, 종료 뒤 취소를 무시하는 IO도 검증했다.
+- reviewer 결과: must-fix 이상 없음. 훅 Strict Mode/pagehide/언마운트 직접 통합 테스트는
+  nice-to-have로 분류했으며 실제 화면 연결 시 수행한다. 현재는 controller dispose와 독립 세션을 검증했다.
+- 전체 23개 테스트 파일 / 379개 테스트, lint, typecheck, build 통과.
+- 실제 HTTP/UUID 조회 포트와 화면 조립, 브라우저 음성 수동 검증은 #17로 남겼다.
+- 사용자가 커밋/푸시/PR 생성을 승인했다. 초기 계획을 브랜치 첫 커밋으로 보존했고,
+  구현 및 이 변경 메모는 다음 커밋에 포함한다.
