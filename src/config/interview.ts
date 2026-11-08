@@ -3,6 +3,7 @@ export const INTERVIEW_QUESTIONS_API_PATH = "/api/interview/questions";
 export const MAX_FOLLOW_UPS = 2;
 export const SPEECH_LANG = "ko-KR";
 export const TTS_SAFETY_TIMEOUT_MS = 30_000;
+export const STT_FINAL_TIMEOUT_MS = 5_000;
 export const RECORDING_MIME = "video/webm";
 
 export const MIC_FFT_SIZE = 1024;

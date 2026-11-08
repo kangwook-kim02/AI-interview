@@ -352,6 +352,96 @@ API 지원이 실제 한국어 음성 제공을 보장하지는 않으며 재생
 
 ---
 
+### 한국어 답변 전사 어댑터 (STT)
+
+클라이언트 호출부는 `@/lib/speech`의 `createSTT()`와 `STTPort`를 사용한다.
+생성과 `isSupported()`는 마이크를 켜지 않는다. 표준 `SpeechRecognition`과 Chrome의
+`webkitSpeechRecognition`을 지원하며 시작 시 `ko-KR`, 연속 인식, 중간 결과를 설정한다.
+API 지원 여부는 실제 권한 허용·네트워크·한국어 인식 성공을 보장하지 않는다.
+
+```ts
+import { createSTT, STTError } from "@/lib/speech";
+
+const stt = createSTT();
+
+// 로컬 클라이언트 테스트 호출부의 시작 버튼에서 호출한다.
+function beginAnswer() {
+  try {
+    stt.start({
+      onInterim: (draft) => console.log("전체 초안 교체", draft),
+      onFinal: (transcript) => console.log("최종 전사", transcript),
+      onError: (error) => console.log("오류/취소", error.code, error.partialTranscript),
+    });
+  } catch (error) {
+    // 미지원·중복 시작·브라우저의 동기 시작 실패
+    console.error(error);
+  }
+}
+
+// 대답 완료 버튼에서 호출한다. stop 직후의 초안을 제출하지 않는다.
+async function completeAnswer() {
+  try {
+    const { transcript, empty } = await stt.stop();
+    console.log(empty ? "확정된 답변 없음" : "확정 완료", transcript);
+  } catch (error) {
+    if (error instanceof STTError) console.log(error.code, error.partialTranscript);
+    else console.error(error);
+  }
+}
+
+// 중도 종료·SPA 화면 이탈·effect cleanup
+function cleanup() { stt.cancel(); }
+```
+
+결과 계약:
+
+- `onInterim`: 확정 조각과 현재 중간 조각을 합친 전체 초안이다. 이전 표시를 **교체**한다.
+  중간 조각은 수정·삭제될 수 있으며 확정 조각만 남아도 최신 초안을 전달한다.
+- `onFinal`: 정상 `stop()` 이후 `end`에서 전체 확정 전사를 한 번 전달한다. 빈 문자열도 전달한다.
+- `stop()`: 인식을 멈추고 늦게 오는 결과를 수집한다. 같은 세션의 반복 호출은 같은 Promise다.
+  `end`에서 `{ transcript, empty }`로 완료하며, 미확정 interim은 포함하지 않는다.
+  시작 전 호출은 `InvalidStateError`로 거부하고, 완료 뒤에는 마지막 세션 결과를 반환한다.
+- 오류: 브라우저의 `not-allowed`, `service-not-allowed`, `network`, `audio-capture`,
+  `no-speech`, `aborted`, `language-not-supported` 등의 코드를 유지한다. `no-match`도 오류다.
+  `STTError.partialTranscript`는 오류 이전에 확정된 조각만 포함한다.
+- 사용자 중지 없이 `end`가 오면 `interrupted` 오류다. 자동 재시작·자동 제출하지 않는다.
+  정상 중지했으나 확정 조각이 없으면 `empty=true`, 무응답 오류가 오면 `no-speech`다.
+- 중지 후 5초(`STT_FINAL_TIMEOUT_MS`) 안에 종료되지 않으면 `timeout` 오류와 abort로 정리한다.
+  이를 성공으로 처리하지 않는다. 시작·중지·abort 동기 실패도 각각 전달한다.
+- `cancel()`·`pagehide`는 `canceled` 오류로 대기를 취소하고 abort한다.
+  SPA 이탈에는 pagehide가 없으므로 호출부가 cancel해야 한다. 종료 경로에서
+  타이머·이벤트·pagehide 리스너를 해제하며 지연 이벤트는 다음 답변에 영향을 주지 않는다.
+
+STT는 자체 마이크를 사용한다. 장비 점검의 카메라·마이크 스트림을 전달받거나 종료하지 않는다.
+카메라 스트림과 STT는 별도 운용하며 카메라 스트림 정리는 그 소유 호출부가 담당한다.
+stop과 abort의 차이 및 전체 결과 목록은 [Web Speech 명세](https://webaudio.github.io/web-speech-api/#speechreco-section)를 따른다.
+
+`npm run test -- src/lib/speech/web-speech-stt.test.ts`는 실제 음성 서비스 호출 없이
+결과 누적·종료 경합·권한/네트워크 오류·timeout·취소·정리를 검증한다.
+
+실제 데스크톱 Chrome 확인 절차:
+
+1. localhost 또는 HTTPS에서 로컬 임시 클라이언트 호출부에 위 예시를 연결한다.
+   기존 준비 화면의 장비 점검처럼 `getUserMedia({ video: true, audio: true })`를 유지하고
+   `video.srcObject`에 연결하여 카메라 미리보기를 재생한다.
+2. 카메라·마이크 권한을 허용하고 시작 동작에서 `beginAnswer()`를 호출한다.
+   가상 답변 “팀에서 의견을 조율해 문제를 해결했습니다”를 여러 문장으로 말한다.
+   한국어 초안이 갱신되고 카메라가 계속 재생되는지 확인한다.
+3. 문장을 마치는 즉시 `completeAnswer()`를 호출한다. 마지막 문장이 최종 전사에
+   포함되고 최종 콜백이 한 번만 오는지, 카메라 트랙이 live인지 확인한다.
+4. 무응답은 `no-speech` 또는 정상 중지의 `empty=true`로 구별되는지 확인한다.
+   권한 거부/허용 후 재시도, 네트워크 중단, 취소와 페이지 이동도 확인한다.
+5. STT를 취소한 뒤 카메라가 계속 재생되는지 확인한다. 카메라 스트림의 모든 트랙도
+   stop한 후 브라우저의 카메라·마이크 사용 표시가 꺼지는지 확인한다.
+   카메라 스트림에 audio 트랙이 있으면 STT만 중지해도 마이크 표시가 남는 것이 정상이다.
+
+이슈 #14 작업 환경에는 연결된 브라우저가 없어 실제 Chrome의 발화·카메라 동시 사용은
+미검증이다. 사용자와 합의하여 실제 화면이 연결되는 [#17](https://github.com/kangwook-kim02/AI-interview/issues/17)에서
+확인하고, [#20](https://github.com/kangwook-kim02/AI-interview/issues/20)의 Chrome 통합 검증에서 재확인한다.
+자동 테스트 결과는 실장비/음성 서비스 검증을 대체하지 않는다.
+
+---
+
 ## E. 로컬 개발 환경
 
 - [ ] **Node.js 22.x는 22.12 이상, 또는 24 이상** 설치 (24 LTS 권장) — https://nodejs.org
