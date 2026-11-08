@@ -310,6 +310,46 @@ OpenAI Responses API에 strict JSON Schema를 전달하고 응답을 다시 Zod�
 - [ ] (후순위) 고품질 음성으로 교체 시(OpenAI TTS/Whisper 등) 해당 키 발급
 - [ ] 테스트는 **Chrome 데스크톱** 권장(Web Speech 지원 안정적). 마이크/카메라 권한 허용 필요
 
+TTS 호출부는 클라이언트에서 `createTTS()`와 `TTSPort`를 사용한다.
+구현체를 직접 import하지 않는다. 생성/지원 확인만으로 음성은 재생되지 않는다.
+
+```ts
+import { createTTS } from "@/lib/speech";
+
+const tts = createTTS();
+if (tts.isSupported()) {
+  try {
+    await tts.speak("지원한 직무에 관심을 갖게 된 계기를 알려 주세요.");
+    // 정상 종료 또는 안전 타임아웃: 다음 단계로 진행 가능
+  } catch (error) {
+    // AbortError: 취소/이탈, 그 외: 미지원 또는 재생 실패
+    // 오류를 처리한 뒤 재시도 여부를 결정한다.
+  }
+}
+// SPA 화면 이탈/React effect cleanup 시 반드시 호출한다.
+tts.cancel();
+```
+
+기본 언어는 `SPEECH_LANG`(ko-KR)이며 선택적으로 `speak(text, { lang })`를 지정할 수 있다.
+`TTS_SAFETY_TIMEOUT_MS`(30초)는 재생 요청부터 적용하는 상한이다. 시작/종료 이벤트가
+누락되어도 타임아웃에 음성을 취소한 뒤 Promise가 완료되며 긴 질문은 잘릴 수 있다.
+정상 end와 timeout이 겹치거나 지연 이벤트가 도착해도 완료 처리는 한 번뿐이다.
+명시적 취소·pagehide·새 질문에 의한 교체는 `AbortError`로 거부되며 다음 단계로
+진행하는 성공 경로와 구별된다. 모든 호출부는 rejection을 처리해야 한다.
+
+Web Speech 큐는 전역이므로 새 `speak`는 다른 인스턴스의 이전 재생도 취소한다.
+`cancel`은 자기 인스턴스의 활성 요청만 정리한다. 이전 인스턴스의 늦은 cleanup으로
+새 인스턴스의 질문이 중단되지 않는다. pagehide는 자동 처리하며, SPA 화면 이탈은
+pagehide가 발생하지 않으므로 호출부에서 cancel해야 한다.
+타이머·이벤트·활성 utterance 참조는 완료/오류/취소 경로에서 해제한다.
+API 지원이 실제 한국어 음성 제공을 보장하지는 않으며 재생 실패는 호출부에 전달한다.
+음성 선택·큐·취소 동작은 [Web Speech 명세](https://webaudio.github.io/web-speech-api/#tts-section)를 따른다.
+
+`npm run test -- src/lib/speech/web-speech-tts.test.ts`로 음성 서비스 호출 없이
+종료 경합·timeout·취소·오류·이탈 정리를 검증할 수 있다. 실제 청취 확인은 Chrome에서
+사용자 클릭으로 위 가상 질문을 재생하고 한국어 발음·완료·취소를 확인한다.
+이번 이슈는 어댑터만 제공하며 실제 면접 화면/상태머신 연결은 후속 작업이다.
+
 ---
 
 ## E. 로컬 개발 환경
