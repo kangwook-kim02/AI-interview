@@ -220,6 +220,14 @@ export type Database = {
         };
         Returns: string;
       };
+      create_interview: {
+        Args: {
+          expected_user_id: string;
+          questions: Json;
+          target_cover_letter_id: string;
+        };
+        Returns: string;
+      };
       update_cover_letter: {
         Args: {
           company_name: string;
