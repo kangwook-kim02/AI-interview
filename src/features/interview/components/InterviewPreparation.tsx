@@ -9,7 +9,7 @@ export async function InterviewPreparation({ id }: { id: string }) {
   return (
     <main className="mx-auto w-full max-w-5xl px-6 py-12">
       {result.status === "success" ? (
-        <DeviceCheck companyName={result.companyName} jobTitle={result.jobTitle} />
+        <DeviceCheck id={id} companyName={result.companyName} jobTitle={result.jobTitle} />
       ) : (
         <div className="mx-auto max-w-2xl">
           <h1 className="text-2xl font-bold">지원 카드를 불러오지 못했어요</h1>

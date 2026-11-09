@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { AUTH_REDIRECT_PATH } from "@/config/auth";
+import { getInterviewPath } from "@/config/interview";
 import { useDeviceCheck } from "../hooks/useDeviceCheck";
 
-export function DeviceCheck({ companyName, jobTitle }: { companyName: string; jobTitle: string }) {
+export function DeviceCheck({ id, companyName, jobTitle }: { id: string; companyName: string; jobTitle: string }) {
+  const router = useRouter();
   const check = useDeviceCheck();
   const video = useRef<HTMLVideoElement>(null);
   const { stream, status, microphoneDetected, microphoneLevel, error } = check.snapshot;
@@ -30,7 +33,7 @@ export function DeviceCheck({ companyName, jobTitle }: { companyName: string; jo
       {check.completed ? (
         <Card className="mt-8" role="status">
           <h2 className="text-2xl font-bold">장비 점검을 마쳤어요</h2>
-          <p className="mt-4 text-muted">카메라와 마이크 사용을 종료했어요. 면접 진행 기능은 준비 중이에요.</p>
+          <p className="mt-4 text-muted">질문을 준비하는 화면으로 이동하고 있어요.</p>
           <Link href={AUTH_REDIRECT_PATH} className="mt-6 inline-block font-semibold text-accent hover:underline">
             대시보드로 돌아가기
           </Link>
@@ -45,6 +48,7 @@ export function DeviceCheck({ companyName, jobTitle }: { companyName: string; jo
               이 점검에서는 화면 미리보기와 소리 크기만 확인하고, 영상·음성 파일을 저장하거나 전송하지 않아요.
               취소하거나 이 화면을 떠나면 장비 사용을 종료해요.
             </p>
+            <p className="mt-3 text-sm text-muted">면접을 시작하면 카메라로 내 모습을 보여 주고, 브라우저 음성 인식으로 답변을 받아써요. 음성은 브라우저의 인식 서비스에서 처리될 수 있으며, 확정된 답변은 서버로 보내 AI가 꼬리질문을 판단해요.</p>
             <label className="mt-6 flex cursor-pointer items-start gap-3">
               <input
                 type="checkbox"
@@ -104,16 +108,19 @@ export function DeviceCheck({ companyName, jobTitle }: { companyName: string; jo
 
           <div className="mt-8 flex flex-wrap items-center gap-4">
             {check.ready ? (
-              <Button onClick={check.complete}>점검 마치기</Button>
+              <Button onClick={() => {
+                check.complete();
+                router.push(`${getInterviewPath(id)}?start=1`);
+              }}>면접 시작하기</Button>
             ) : (
               <Button onClick={check.start} disabled={!check.consented || !supported || status === "requesting"}>
                 {status === "requesting" ? "권한 응답 기다리는 중" : status === "active" || status === "error" || check.previewError ? "다시 점검하기" : "동의하고 장비 점검하기"}
               </Button>
             )}
-            {!check.ready && <Button variant="secondary" disabled>점검 마치기</Button>}
+            {!check.ready && <Button variant="secondary" disabled>면접 시작하기</Button>}
             <Link href={AUTH_REDIRECT_PATH} onClick={check.stop} className="px-2 py-3 font-semibold text-accent hover:underline">취소하고 돌아가기</Link>
           </div>
-          <p className="mt-4 text-sm text-muted">카메라 영상·마이크 입력·음성 기능이 모두 확인되면 점검을 마칠 수 있어요.</p>
+          <p className="mt-4 text-sm text-muted">카메라 영상·마이크 입력·음성 기능이 모두 확인되면 면접을 시작할 수 있어요.</p>
         </>
       )}
     </div>

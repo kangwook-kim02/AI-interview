@@ -113,6 +113,9 @@ export function createInterviewSession({ io, tts, stt }: InterviewSessionDepende
     start(coverLetterId: string) { send({ type: "START", coverLetterId }); },
     answerDone(operationId: number) { send({ type: "ANSWER_DONE", operationId }); },
     retry(operationId: number) { send({ type: "RETRY", operationId }); },
+    interrupt(message: string) {
+      send({ type: "FAILED", operationId: store.getState().operationId, message });
+    },
     abort() { send({ type: "ABORT" }); },
     dispose() {
       if (disposed) return;

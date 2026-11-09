@@ -57,6 +57,18 @@ function fixture() {
 }
 
 describe("면접 세션 controller", () => {
+  it("카메라 장애 시 음성과 요청을 중단하고 같은 질문으로 재시도한다", async () => {
+    const f = fixture();
+    await f.recording();
+    f.session.interrupt("카메라를 다시 연결해 주세요.");
+    expect(f.state()).toMatchObject({ phase: "error", error: { stage: "recording", message: "카메라를 다시 연결해 주세요." } });
+    expect(f.stt.cancel).toHaveBeenCalledOnce();
+    f.retry();
+    expect(f.state()).toMatchObject({ phase: "asking", question: prepared.questions[0] });
+    f.speaks.at(-1)!.resolve(); await flush();
+    expect(f.state().phase).toBe("recording");
+    f.session.dispose();
+  });
   it("생성·TTS·STT 최종 확정 순서를 지키고 중복 완료와 onFinal을 중복 처리하지 않는다", async () => {
     const f = fixture();
     expect(f.io.start).not.toHaveBeenCalled();

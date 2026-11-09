@@ -23,3 +23,14 @@ export const initialDeviceCheck: DeviceCheckSnapshot = {
   microphoneLevel: 0,
   error: null,
 };
+
+export type CameraPreviewSnapshot = {
+  status: DeviceCheckStatus;
+  stream: MediaStream | null;
+  error: string | null;
+};
+
+export interface CameraPreviewPort {
+  start(): Promise<void>;
+  stop(): void;
+}

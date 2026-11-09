@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useStore } from "zustand";
 import type { InterviewSessionIO } from "@/lib/interview-session/types";
 import { createSTT, createTTS } from "@/lib/speech";
@@ -28,9 +28,10 @@ export function useInterviewSession(io: InterviewSessionIO) {
   return {
     snapshot,
     ready: session !== null,
-    start: (coverLetterId: string) => session?.start(coverLetterId),
+    start: useCallback((coverLetterId: string) => session?.start(coverLetterId), [session]),
     answerDone: () => session?.answerDone(snapshot.operationId),
     retry: () => session?.retry(snapshot.operationId),
     abort: () => session?.abort(),
+    interrupt: useCallback((message: string) => session?.interrupt(message), [session]),
   };
 }
