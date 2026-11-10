@@ -92,7 +92,7 @@ begin
   select id into other_id from public.interview_questions where interview_id=sid2 and order_index=1;
   if public.save_interview_follow_up(sid2,other_id,auth.uid(),'','guess') <> '{"followUp":null}'::jsonb then
     raise exception 'Empty answer should be null'; end if;
-  update public.interviews set status='completed' where id=sid;
+  update public.interviews set status='aborted' where id=sid;
   perform pg_temp.expect_error(format('select public.save_interview_follow_up(%L,%L,auth.uid(),%L,%L)',sid,main_id,'답변1','q'),'P0010');
   update public.interviews set status='aborted' where id=sid2;
   perform pg_temp.expect_error(format('select public.save_interview_follow_up(%L,%L,auth.uid(),%L,%L)',sid2,other_id,'','q'),'P0010');

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { MAIN_QUESTION_COUNT, MAX_FOLLOW_UPS } from "@/config/interview";
 import type { InterviewSessionIO } from "@/lib/interview-session/types";
+import { InterviewNotCreatedError } from "@/lib/interview-session/types";
 import { STTError, type STTHandlers, type STTPort, type STTResult, type TTSPort } from "@/lib/speech";
 import type { FollowUpResponse, StartInterviewResponse } from "@/types/interview";
 import { createInterviewSession } from "./session";
@@ -24,6 +25,9 @@ function fixture() {
   const decisions: ReturnType<typeof deferred<FollowUpResponse>>[] = [];
   const handlers: STTHandlers[] = [];
   const io = {
+    finish: vi.fn<InterviewSessionIO["finish"]>(async ({ interviewId, status }) => ({
+      interviewId, status, endedAt: "2026-11-10T12:00:00Z", durationSeconds: 60,
+    })),
     start: vi.fn<InterviewSessionIO["start"]>(() => {
       const task = deferred<StartInterviewResponse>(); starts.push(task); return task.promise;
     }),
@@ -57,6 +61,76 @@ function fixture() {
 }
 
 describe("면접 세션 controller", () => {
+  it("시작 전 종료와 명확한 생성 거절 후 종료는 기록 없는 취소로 끝난다", async () => {
+    const idle = fixture(); idle.session.abort();
+    expect(idle.state()).toMatchObject({ phase: "done", interviewId: null });
+    expect(idle.io.finish).not.toHaveBeenCalled();
+    const f = fixture();
+    f.session.start("card"); f.starts[0].reject(new InterviewNotCreatedError()); await flush();
+    expect(f.state().phase).toBe("error");
+    f.session.abort(); await flush();
+    expect(f.state()).toMatchObject({ phase: "done", interviewId: null });
+    expect(f.io.finish).not.toHaveBeenCalled();
+  });
+  it("생성 중 종료 후 명확한 생성 거절도 취소로 처리한다", async () => {
+    const f = fixture(); f.session.start("card"); f.session.abort();
+    f.starts[0].reject(new InterviewNotCreatedError()); await flush();
+    expect(f.state()).toMatchObject({ phase: "done", interviewId: null });
+    expect(f.io.finish).not.toHaveBeenCalled();
+  });
+  it("면접 ID가 유실됐을 수 있는 시작 실패는 저장 완료로 처리하지 않는다", async () => {
+    const f = fixture(); f.session.start("card"); f.session.abort();
+    f.starts[0].reject(new Error("network response lost")); await flush();
+    expect(f.state()).toMatchObject({ phase: "error", interviewId: null, error: { stage: "finishing" } });
+    expect(f.io.finish).not.toHaveBeenCalled();
+  });
+  it("종료 저장 실패는 완료 처리하지 않고 같은 답변과 사유로 재시도한다", async () => {
+    const f = fixture();
+    await f.evaluating();
+    const task = deferred<Awaited<ReturnType<InterviewSessionIO["finish"]>>>();
+    f.io.finish.mockReturnValueOnce(task.promise);
+    f.session.abort();
+    expect(f.state()).toMatchObject({ phase: "finishing", endReason: "aborted" });
+    expect(f.io.finish.mock.calls[0][0]).toMatchObject({ answers: [{ answerTranscript: "최종 답변" }] });
+    task.reject(new Error("private database detail")); await flush();
+    expect(f.state()).toMatchObject({ phase: "error", error: { stage: "finishing" } });
+    expect(f.state().error?.message).not.toContain("private");
+    const input = f.io.finish.mock.calls[0][0];
+    f.session.abort();
+    expect(f.io.finish).toHaveBeenCalledOnce();
+    f.retry(); await flush();
+    expect(f.io.finish.mock.calls[1][0]).toEqual(input);
+    expect(f.state()).toMatchObject({ phase: "done", endReason: "aborted" });
+    f.decisions[0].resolve({ followUp: "늦은 질문" }); await flush();
+    expect(f.tts.speak).toHaveBeenCalledOnce();
+  });
+
+  it("종료 응답 유실 후 재시도에서도 completed를 aborted로 바꾸지 않는다", async () => {
+    const f = fixture();
+    f.io.finish.mockRejectedValueOnce(new Error("response lost"));
+    await f.asking();
+    for (let i = 0; i < MAIN_QUESTION_COUNT; i++) {
+      f.speaks.at(-1)!.resolve(); await flush();
+      f.answerDone(); f.stops.at(-1)!.resolve({ transcript: "답변", empty: false }); await flush();
+      f.decisions.at(-1)!.resolve({ followUp: null }); await flush();
+    }
+    expect(f.state()).toMatchObject({ phase: "error", endReason: "completed", error: { stage: "finishing" } });
+    f.session.abort(); f.retry(); await flush();
+    expect(f.io.finish.mock.calls.map(([input]) => input.status)).toEqual(["completed", "completed"]);
+    expect(f.state().phase).toBe("done");
+  });
+
+  it("면접 ID 회수 뒤 종료 실패를 재시도할 때 새 면접을 만들지 않는다", async () => {
+    const f = fixture();
+    f.io.finish.mockRejectedValueOnce(new Error("offline"));
+    f.session.start("card"); f.session.abort();
+    f.starts[0].resolve(prepared); await flush();
+    expect(f.state()).toMatchObject({ phase: "error", interviewId: prepared.interviewId, endReason: "aborted" });
+    f.retry(); await flush();
+    expect(f.state().phase).toBe("done");
+    expect(f.io.start).toHaveBeenCalledOnce(); expect(f.io.finish).toHaveBeenCalledTimes(2);
+    expect(f.tts.speak).not.toHaveBeenCalled();
+  });
   it("카메라 장애 시 음성과 요청을 중단하고 같은 질문으로 재시도한다", async () => {
     const f = fixture();
     await f.recording();
@@ -143,9 +217,17 @@ describe("면접 세션 controller", () => {
       expect(f.state().phase).toBe(phase);
       const signal = phase === "evaluating" ? f.io.followUp.mock.calls[0][1] : f.io.start.mock.calls[0][1];
       f.session.abort();
+      if (phase === "generating_questions") {
+        expect(f.state().phase).toBe("finishing");
+        expect(signal.aborted).toBe(false);
+        expect(f.io.finish).not.toHaveBeenCalled();
+        f.starts[0].resolve(prepared);
+      }
+      await flush();
       const finished = f.state();
       expect(finished).toMatchObject({ phase: "done", endReason: "aborted" });
-      expect(signal.aborted).toBe(true);
+      if (phase !== "generating_questions") expect(signal.aborted).toBe(true);
+      expect(f.io.finish).toHaveBeenCalledOnce();
       expect(f.tts.cancel).toHaveBeenCalled(); expect(f.stt.cancel).toHaveBeenCalled();
       f.starts[0].resolve(prepared); f.speaks[0]?.resolve();
       f.stops[0]?.resolve({ transcript: "늦은 전사", empty: false });
@@ -249,6 +331,7 @@ describe("면접 세션 controller", () => {
     await f.recording();
     f.stt.cancel.mockImplementation(() => f.handlers[0].onError?.(new STTError("canceled", "취소", "")));
     f.session.abort();
+    await flush();
     expect(f.state()).toMatchObject({ phase: "done", endReason: "aborted", error: null });
   });
 

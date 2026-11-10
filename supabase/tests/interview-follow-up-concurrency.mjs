@@ -67,7 +67,7 @@ try {
   assert.equal((await admin.query("select count(*)::int as count from public.interview_questions where parent_question_id=$1", [mains[0].id])).rows[0].count, 2);
   // A concurrent close must win over a cached successful result as well.
   await admin.query("begin");
-  await admin.query("update public.interviews set status='completed' where id=$1", [sessionId]);
+  await admin.query("update public.interviews set status='aborted' where id=$1", [sessionId]);
   const closing = save(second, sessionId, mains[0].id, "답변1", "q").then(() => null, (error) => error);
   await waitForLock();
   await admin.query("commit");

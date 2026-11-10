@@ -171,13 +171,12 @@ begin
     'select id from public.cover_letters where id = %L and updated_at > ''2000-01-01''',
     pg_temp.fixture_id(10 + actor)), 1);
 
-  update public.interviews
-    set status = 'completed', duration_seconds = 120, ended_at = started_at + interval '120 seconds'
-    where id = pg_temp.fixture_id(50 + actor);
   update public.interview_questions set answer_transcript = '테스트 답변',
     asked_at = now(), answered_at = now() where id = pg_temp.fixture_id(70 + actor);
+  -- This fixture has fewer than four mains: finish as aborted and let the server set time.
+  update public.interviews set status = 'aborted' where id = pg_temp.fixture_id(50 + actor);
   perform pg_temp.expect_rows(format(
-    'select id from public.interviews where id = %L and status = ''completed'' and recording_path is null and duration_seconds = 120',
+    'select id from public.interviews where id = %L and status = ''aborted'' and recording_path is null and ended_at is not null and duration_seconds = floor(extract(epoch from ended_at-started_at))',
     pg_temp.fixture_id(50 + actor)), 1);
   perform pg_temp.expect_rows(format(
     'select id from public.interview_questions where id = %L and answer_audio_path is null and answer_transcript = ''테스트 답변''',

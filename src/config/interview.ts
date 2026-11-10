@@ -1,6 +1,8 @@
 export const MAIN_QUESTION_COUNT = 4;
 export const INTERVIEW_QUESTIONS_API_PATH = "/api/interview/questions";
 export const INTERVIEW_FOLLOW_UP_API_PATH = "/api/interview/follow-up";
+export const INTERVIEW_FINISH_API_PATH = "/api/interview/finish";
+export const INTERVIEW_NOT_CREATED_HEADER = "X-Interview-Not-Created";
 export const ANSWER_TRANSCRIPT_MAX_LENGTH = 20_000;
 export const MAX_FOLLOW_UPS = 2;
 export const SPEECH_LANG = "ko-KR";
@@ -25,4 +27,8 @@ export function getInterviewQuestionListPath(interviewId: string) {
 
 export function getInterviewPreparePath(coverLetterId: string) {
   return `/interview/${encodeURIComponent(coverLetterId)}/prepare`;
+}
+
+export function getInterviewResultPath(coverLetterId: string, interviewId: string) {
+  return `/interview/${encodeURIComponent(coverLetterId)}/${encodeURIComponent(interviewId)}/result`;
 }

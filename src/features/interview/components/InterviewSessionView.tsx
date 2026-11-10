@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AUTH_REDIRECT_PATH } from "@/config/auth";
-import { getInterviewPreparePath, MAIN_QUESTION_COUNT, MAX_FOLLOW_UPS } from "@/config/interview";
+import { getInterviewPreparePath, getInterviewResultPath, MAIN_QUESTION_COUNT, MAX_FOLLOW_UPS } from "@/config/interview";
 import { interviewSessionIO } from "@/lib/interview-session/http";
 import { createSTT, createTTS } from "@/lib/speech";
 import { useInterviewCamera } from "../hooks/useInterviewCamera";
@@ -15,17 +16,18 @@ const phaseLabels = {
   idle: "시작을 준비해요", generating_questions: "자소서를 바탕으로 질문을 준비하고 있어요",
   asking: "질문을 듣고 있어요", recording: "편안하게 답해 주세요. 듣고 있어요",
   transcribing: "마지막 말씀까지 정리하고 있어요", evaluating: "답변을 살펴보고 있어요",
-  error: "잠시 멈췄어요", finishing: "면접을 마무리하고 있어요", done: "연습을 마쳤어요",
+  error: "잠시 멈췄어요", finishing: "면접 기록을 저장하고 있어요", done: "연습을 마쳤어요",
 };
 
 export function InterviewSessionView({ id, companyName, jobTitle, autoStart = false }: {
   id: string; companyName: string; jobTitle: string; autoStart?: boolean;
 }) {
+  const router = useRouter();
   const { snapshot, ready, start, answerDone, retry, abort, interrupt } = useInterviewSession(interviewSessionIO);
   const [cameraWanted, setCameraWanted] = useState(autoStart);
   const [supported, setSupported] = useState<boolean | null>(null);
   const [confirmEnd, setConfirmEnd] = useState(false);
-  const terminal = snapshot.phase === "finishing" || snapshot.phase === "done";
+  const terminal = snapshot.endReason !== null;
   const camera = useInterviewCamera(cameraWanted && supported === true && !terminal);
   const video = useRef<HTMLVideoElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -35,6 +37,11 @@ export function InterviewSessionView({ id, companyName, jobTitle, autoStart = fa
   const progress = snapshot.endReason === "completed" ? MAIN_QUESTION_COUNT : currentNumber;
 
   useEffect(() => { setSupported(createTTS().isSupported() && createSTT().isSupported()); }, []);
+  useEffect(() => {
+    if (snapshot.phase === "done" && snapshot.interviewId) {
+      router.replace(getInterviewResultPath(id, snapshot.interviewId));
+    }
+  }, [snapshot.phase, snapshot.interviewId, id, router]);
   useEffect(() => {
     const element = video.current;
     if (!element) return;
@@ -55,11 +62,11 @@ export function InterviewSessionView({ id, companyName, jobTitle, autoStart = fa
     if (terminal) setConfirmEnd(false);
   }, [terminal]);
   useEffect(() => {
-    if (snapshot.phase === "idle" || terminal) return;
+    if (snapshot.phase === "idle" || snapshot.phase === "done") return;
     const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [snapshot.phase, terminal]);
+  }, [snapshot.phase]);
 
   function end() {
     setConfirmEnd(false);
@@ -109,7 +116,8 @@ export function InterviewSessionView({ id, companyName, jobTitle, autoStart = fa
         <section aria-labelledby="session-question" className="min-w-0 rounded-lg border border-line bg-surface p-5 sm:p-8">
           <p role="status" className="text-sm font-semibold text-accent">{phaseLabels[snapshot.phase]}</p>
           <h2 id="session-question" className="mt-4 whitespace-pre-wrap break-words text-xl font-bold leading-relaxed sm:text-2xl">
-            {terminal ? snapshot.endReason === "completed" ? "끝까지 이야기해 주셨어요" : "여기서 연습을 마쳤어요"
+            {terminal ? snapshot.phase === "done" ? snapshot.interviewId ? "연습 기록을 저장했어요" : "면접 시작을 취소했어요"
+              : snapshot.error ? "기록 저장을 확인해 주세요" : "기록을 안전하게 남기고 있어요"
               : snapshot.question ?? "내 경험을 말하는 연습, 함께 시작해요"}
           </h2>
 
@@ -132,15 +140,17 @@ export function InterviewSessionView({ id, companyName, jobTitle, autoStart = fa
             <Button className="mt-6 w-full sm:w-auto" disabled={snapshot.phase !== "recording" || !cameraReady} onClick={answerDone}>대답 완료</Button>
           </div>}
 
-          {snapshot.error && !terminal && <div role="alert" className="mt-6 rounded-md bg-primary-soft p-5">
+          {snapshot.error && <div role="alert" className="mt-6 rounded-md bg-primary-soft p-5">
             <p>{snapshot.error.message}</p>
             {snapshot.error.code && <p className="mt-2 text-sm text-muted">마이크 권한과 네트워크 연결을 확인해 주세요. 다시 시도하면 같은 질문부터 이어가요.</p>}
-            <Button className="mt-4" disabled={!cameraReady} onClick={retry}>다시 시도하기</Button>
+            {(!terminal || snapshot.interviewId) && <Button className="mt-4" disabled={!terminal && !cameraReady} onClick={retry}>{terminal ? "기록 저장 다시 시도하기" : "다시 시도하기"}</Button>}
           </div>}
 
           {terminal && <div className="mt-5">
-            <p className="text-muted">{snapshot.answers.length}개의 답변을 마쳤어요. 아래에서 이번에 말한 내용을 돌아볼 수 있어요.</p>
-            <Link href={AUTH_REDIRECT_PATH} className="mt-6 inline-block rounded-pill bg-accent-soft px-6 py-3 font-semibold text-accent hover:underline">대시보드로 돌아가기</Link>
+            <p className="text-muted">{snapshot.phase === "done" ? snapshot.interviewId ? "저장된 기록으로 이동해요." : "생성된 면접이 없어 저장할 기록은 없어요."
+              : snapshot.error ? "아직 저장 완료를 확인하지 못했어요. 확정된 답변은 아래에 남아 있어요."
+                : "확정된 답변과 소요시간을 저장하고 있어요. 잠시만 기다려 주세요."}</p>
+            {(snapshot.phase === "done" || (snapshot.error && !snapshot.interviewId)) && <Link href={AUTH_REDIRECT_PATH} className="mt-6 inline-block rounded-pill bg-accent-soft px-6 py-3 font-semibold text-accent hover:underline">대시보드로 돌아가기</Link>}
           </div>}
         </section>
       </div>
@@ -159,7 +169,7 @@ export function InterviewSessionView({ id, companyName, jobTitle, autoStart = fa
       <dialog ref={dialog} onCancel={() => setConfirmEnd(false)} onClose={() => setConfirmEnd(false)} aria-labelledby="end-interview-title"
         className="w-[calc(100%_-_2rem)] max-w-md rounded-lg border border-line bg-surface p-6 text-foreground shadow-md backdrop:bg-foreground/30 sm:p-8">
         <h2 id="end-interview-title" className="text-xl font-bold">여기서 면접을 마칠까요?</h2>
-        <p className="mt-4 text-muted">진행 중인 음성 답변을 멈추고 카메라와 마이크를 꺼요.</p>
+        <p className="mt-4 text-muted">카메라와 마이크를 끄고 확정된 답변까지 기록해요. 아직 받아쓰는 중인 답변은 저장하지 않아요.</p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Button variant="secondary" onClick={() => setConfirmEnd(false)}>계속 연습하기</Button>
           <Button onClick={end}>면접 마치기</Button>

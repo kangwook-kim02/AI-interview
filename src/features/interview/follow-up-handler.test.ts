@@ -7,11 +7,13 @@ import { InterviewRequestError } from "@/lib/supabase/interview-errors";
 const mocks = vi.hoisted(() => ({
   getCurrentUser: vi.fn(), loadFollowUpState: vi.fn(), saveFollowUp: vi.fn(),
   findCoverLetter: vi.fn(), getQuestionGenerator: vi.fn(), generateFollowUp: vi.fn(),
+  saveInterviewAnswer: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/session", () => ({ getCurrentUser: mocks.getCurrentUser }));
 vi.mock("@/lib/supabase/cover-letters", () => ({ findCoverLetter: mocks.findCoverLetter }));
 vi.mock("@/lib/supabase/interview-follow-ups", () => mocks);
+vi.mock("@/lib/supabase/interview-records", () => mocks);
 vi.mock("@/lib/ai", async () => ({ ...await import("@/lib/ai/errors"), ...mocks }));
 
 const userId = "c0150000-0000-4000-8000-000000000001";
@@ -57,6 +59,8 @@ describe("꼬리질문 API", () => {
       previousFollowUps: state.previousFollowUps,
     });
     expect(mocks.saveFollowUp).toHaveBeenCalledWith(input, { followUp: "새 꼬리질문?" }, userId);
+    expect(mocks.saveInterviewAnswer).toHaveBeenCalledWith(input, userId);
+    expect(mocks.saveInterviewAnswer.mock.invocationCallOrder[0]).toBeLessThan(mocks.generateFollowUp.mock.invocationCallOrder[0]);
   });
   it("불필요한 꼬리질문의 null도 저장한다", async () => {
     mocks.generateFollowUp.mockResolvedValue(null);
@@ -129,13 +133,20 @@ describe("꼬리질문 API", () => {
     mocks.saveFollowUp.mockRejectedValueOnce(new Error("secret-key private-detail"));
     await expectError(await POST(request()), 500);
   });
-  it("생성 중에는 아직 저장하지 않는다", async () => {
+  it("생성 중에는 답변만 저장하고 판단은 아직 저장하지 않는다", async () => {
     let resolve!: (result: string) => void;
     mocks.generateFollowUp.mockReturnValue(new Promise<string>((r) => { resolve = r; }));
     const pending = POST(request());
     await vi.waitFor(() => expect(mocks.generateFollowUp).toHaveBeenCalledOnce());
+    expect(mocks.saveInterviewAnswer).toHaveBeenCalledWith(input, userId);
     expect(mocks.saveFollowUp).not.toHaveBeenCalled();
     resolve("완료된 질문?");
     expect((await pending).status).toBe(200);
+  });
+  it("답변 저장 실패 시 AI와 판단 저장을 진행하지 않는다", async () => {
+    mocks.saveInterviewAnswer.mockRejectedValue(new Error("private detail"));
+    await expectError(await POST(request()), 500);
+    expect(mocks.generateFollowUp).not.toHaveBeenCalled();
+    expect(mocks.saveFollowUp).not.toHaveBeenCalled();
   });
 });

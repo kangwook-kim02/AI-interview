@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getInterviewPreparation } from "./queries";
+import { getInterviewPreparation, getSavedInterview } from "./queries";
 
-const { getCurrentUser, findCoverLetter } = vi.hoisted(() => ({
-  getCurrentUser: vi.fn(), findCoverLetter: vi.fn(),
+const { getCurrentUser, findCoverLetter, findSavedInterview } = vi.hoisted(() => ({
+  getCurrentUser: vi.fn(), findCoverLetter: vi.fn(), findSavedInterview: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("next/navigation", () => ({
@@ -11,11 +11,32 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/lib/supabase/session", () => ({ getCurrentUser }));
 vi.mock("@/lib/supabase/cover-letters", () => ({ findCoverLetter }));
+vi.mock("@/lib/supabase/interview-records", () => ({ findSavedInterview }));
 
 const id = "c0100000-0000-4000-8000-000000000001";
 beforeEach(() => {
   getCurrentUser.mockReset().mockResolvedValue({ id: "verified-user" });
   findCoverLetter.mockReset().mockResolvedValue(null);
+  findSavedInterview.mockReset().mockResolvedValue(null);
+});
+
+describe("저장된 면접 결과 확인", () => {
+  it("미인증과 잘못된 주소에서는 기록을 조회하지 않는다", async () => {
+    getCurrentUser.mockResolvedValueOnce(null);
+    await expect(getSavedInterview(id, id)).rejects.toThrow("REDIRECT:/login");
+    await expect(getSavedInterview("bad", id)).rejects.toThrow("NOT_FOUND");
+    await expect(getSavedInterview(id, "bad")).rejects.toThrow("NOT_FOUND");
+    expect(findSavedInterview).not.toHaveBeenCalled();
+  });
+  it("없는/타인/진행 중 기록은 숨기고 DB 실패를 구분한다", async () => {
+    await expect(getSavedInterview(id, id)).rejects.toThrow("NOT_FOUND");
+    expect(findSavedInterview).toHaveBeenCalledWith(id, id, "verified-user");
+    findSavedInterview.mockRejectedValueOnce(new Error("private"));
+    expect(await getSavedInterview(id, id)).toEqual({ status: "error" });
+    const record = { interviewId: id, status: "aborted", endedAt: "2026-11-10T12:00:00Z", durationSeconds: 1 };
+    findSavedInterview.mockResolvedValueOnce(record);
+    expect(await getSavedInterview(id, id)).toEqual({ status: "success", record });
+  });
 });
 
 describe("면접 준비 조회", () => {

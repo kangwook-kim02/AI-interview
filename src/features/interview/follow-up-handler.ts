@@ -2,6 +2,7 @@ import "server-only";
 import { getQuestionGenerator, QuestionGenerationError } from "@/lib/ai";
 import { findCoverLetter } from "@/lib/supabase/cover-letters";
 import { loadFollowUpState, saveFollowUp } from "@/lib/supabase/interview-follow-ups";
+import { saveInterviewAnswer } from "@/lib/supabase/interview-records";
 import { InterviewRequestError } from "@/lib/supabase/interview-errors";
 import { getCurrentUser } from "@/lib/supabase/session";
 import { coverLetterSchema } from "@/types/cover-letter";
@@ -28,6 +29,8 @@ export async function followUpHandler(request: Request) {
     if (!parsed.success) return json({ error: "면접·질문 주소와 확정 답변을 확인해 주세요." }, 400);
     const input = parsed.data;
     const state = await loadFollowUpState(input, user.id);
+    // Persist the final transcript even when AI generation fails or is interrupted.
+    await saveInterviewAnswer(input, user.id);
     // Revalidate even a cached result: the session may have ended since the read.
     if (state.decision) return json(await saveFollowUp(input, state.decision, user.id));
     let result = { followUp: null as string | null };
