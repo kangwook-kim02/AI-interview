@@ -258,6 +258,24 @@ export type Database = {
         };
         Returns: string;
       };
+      finish_interview: {
+        Args: {
+          answers: Json;
+          end_status: string;
+          expected_user_id: string;
+          target_interview_id: string;
+        };
+        Returns: Json;
+      };
+      save_interview_answer: {
+        Args: {
+          answer: string;
+          expected_user_id: string;
+          source_question_id: string;
+          target_interview_id: string;
+        };
+        Returns: undefined;
+      };
       save_interview_follow_up: {
         Args: {
           answer: string;

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getInterviewQuestionListPath, INTERVIEW_FOLLOW_UP_API_PATH, INTERVIEW_QUESTIONS_API_PATH } from "@/config/interview";
+import { getInterviewQuestionListPath, INTERVIEW_FINISH_API_PATH, INTERVIEW_FOLLOW_UP_API_PATH, INTERVIEW_NOT_CREATED_HEADER, INTERVIEW_QUESTIONS_API_PATH } from "@/config/interview";
 import { interviewSessionIO } from "./http";
+import { InterviewNotCreatedError } from "./types";
 
 const interviewId = "c0170000-0000-4000-8000-000000000001";
 const ids = Array.from({ length: 6 }, (_, i) => `c0170000-0000-4000-8000-${String(i + 2).padStart(12, "0")}`);
@@ -12,6 +13,46 @@ const response = (body: unknown, status = 200) => new Response(JSON.stringify(bo
 const input = { interviewId, mainQuestionIndex: 0, followUpIndex: 0, answerTranscript: "확정 답변" };
 
 describe("면접 HTTP IO", () => {
+  it.each([400, 401, 403, 404, 500, 502, 503, 504])("서버가 명시한 생성 전 거절 %s는 기록 없는 취소로 구별한다", async (status) => {
+    fetchMock.mockResolvedValue(new Response("{}", { status, headers: { [INTERVIEW_NOT_CREATED_HEADER]: "true" } }));
+    await expect(interviewSessionIO.start(ids[0], new AbortController().signal)).rejects.toBeInstanceOf(InterviewNotCreatedError);
+  });
+  it.each([502, 503, 504])("게이트웨이 %s만으로는 생성 실패를 확정하지 않는다", async (status) => {
+    fetchMock.mockResolvedValue(response({}, status));
+    const error = await interviewSessionIO.start(ids[0], new AbortController().signal).catch((error: unknown) => error);
+    expect(error).not.toBeInstanceOf(InterviewNotCreatedError);
+    expect(error).toBeInstanceOf(Error);
+  });
+  it("시작 DB/네트워크 실패는 생성되지 않았다고 단정하지 않는다", async () => {
+    fetchMock.mockResolvedValueOnce(response({}, 500)).mockRejectedValueOnce(new TypeError("network"));
+    for (let i = 0; i < 2; i++) {
+      const error = await interviewSessionIO.start(ids[0], new AbortController().signal).catch((error: unknown) => error);
+      expect(error).not.toBeInstanceOf(InterviewNotCreatedError);
+      expect(error).toBeInstanceOf(Error);
+    }
+  });
+  const finished = { interviewId, status: "aborted", endedAt: "2026-11-10T12:00:00Z", durationSeconds: 42 };
+  it("종료는 확정 답변의 UUID만 보내고 서버 종료 결과를 확인한다", async () => {
+    fetchMock.mockResolvedValueOnce(response({ questions })).mockResolvedValueOnce(response(finished));
+    const signal = new AbortController().signal;
+    expect(await interviewSessionIO.finish({ interviewId, status: "aborted", answers: [
+      { mainQuestionIndex: 0, followUpIndex: 2, answerTranscript: "확정 꼬리 답변" },
+    ] }, signal)).toEqual(finished);
+    expect(fetchMock.mock.calls[1]).toEqual([INTERVIEW_FINISH_API_PATH, expect.objectContaining({ signal,
+      body: JSON.stringify({ interviewId, status: "aborted", answers: [{ questionId: ids[5], answerTranscript: "확정 꼬리 답변" }] }),
+    })]);
+  });
+  it("확정 답변이 없는 중도 종료는 질문 조회 없이 저장한다", async () => {
+    fetchMock.mockResolvedValue(response(finished));
+    await interviewSessionIO.finish({ interviewId, status: "aborted", answers: [] }, new AbortController().signal);
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock.mock.calls[0][0]).toBe(INTERVIEW_FINISH_API_PATH);
+  });
+  it.each([{ ...finished, status: "completed" }, { ...finished, interviewId: ids[0] },
+    { ...finished, durationSeconds: null }, {}])("종료 결과 불일치/누락은 성공이 아니다", async (body) => {
+    fetchMock.mockResolvedValue(response(body));
+    await expect(interviewSessionIO.finish({ interviewId, status: "aborted", answers: [] }, new AbortController().signal)).rejects.toThrow();
+  });
   it("카드 ID만 시작 API에 전송하고 응답을 검증한다", async () => {
     const result = { interviewId, questions: ["하나", "둘", "셋", "넷"] };
     fetchMock.mockResolvedValueOnce(response(result));

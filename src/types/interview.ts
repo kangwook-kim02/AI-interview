@@ -23,6 +23,22 @@ export const followUpResponseSchema = z.strictObject({
 export type FollowUpRequest = z.infer<typeof followUpRequestSchema>;
 export type FollowUpResponse = z.infer<typeof followUpResponseSchema>;
 
+export const finishInterviewRequestSchema = z.strictObject({
+  interviewId: interviewIdSchema,
+  status: z.enum(["completed", "aborted"]),
+  answers: z.array(followUpRequestSchema.omit({ interviewId: true }))
+    .max(MAIN_QUESTION_COUNT * (MAX_FOLLOW_UPS + 1))
+    .refine((answers) => new Set(answers.map((answer) => answer.questionId)).size === answers.length),
+});
+export const finishInterviewResponseSchema = z.strictObject({
+  interviewId: interviewIdSchema,
+  status: z.enum(["completed", "aborted"]),
+  endedAt: z.iso.datetime({ offset: true }),
+  durationSeconds: z.number().int().nonnegative(),
+});
+export type FinishInterviewRequest = z.infer<typeof finishInterviewRequestSchema>;
+export type FinishInterviewResponse = z.infer<typeof finishInterviewResponseSchema>;
+
 export const interviewQuestionListSchema = z.strictObject({
   questions: z.array(z.strictObject({
     id: z.uuid(),

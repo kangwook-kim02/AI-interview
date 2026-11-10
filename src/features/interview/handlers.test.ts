@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/interview/questions/route";
-import { MAIN_QUESTION_COUNT, INTERVIEW_QUESTIONS_API_PATH } from "@/config/interview";
+import { MAIN_QUESTION_COUNT, INTERVIEW_NOT_CREATED_HEADER, INTERVIEW_QUESTIONS_API_PATH } from "@/config/interview";
 import { QuestionGenerationError } from "@/lib/ai/errors";
 import { CoverLetterNotFoundError } from "@/lib/supabase/cover-letter-errors";
 
@@ -145,7 +145,9 @@ describe("면접 시작 API", () => {
     ["PROVIDER_FAILURE", 502], ["EMPTY_RESPONSE", 502], ["INVALID_RESPONSE", 502],
   ] as const)("AI 오류 %s를 %s로 반환하고 세션을 저장하지 않는다", async (code, status) => {
     generateMainQuestions.mockRejectedValue(new QuestionGenerationError(code));
-    await expectError(await POST(request()), status);
+    const response = await POST(request());
+    expect(response.headers.get(INTERVIEW_NOT_CREATED_HEADER)).toBe("true");
+    await expectError(response, status);
     expect(createInterview).not.toHaveBeenCalled();
   });
 
@@ -165,7 +167,9 @@ describe("면접 시작 API", () => {
 
   it("저장 실패/결과 유실은 성공으로 응답하지 않고 재저장도 하지 않는다", async () => {
     createInterview.mockRejectedValueOnce(new Error("private-detail secret-key"));
-    await expectError(await POST(request()), 500);
+    const response = await POST(request());
+    expect(response.headers.has(INTERVIEW_NOT_CREATED_HEADER)).toBe(false);
+    await expectError(response, 500);
     expect(createInterview).toHaveBeenCalledOnce();
   });
 

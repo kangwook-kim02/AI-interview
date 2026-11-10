@@ -6,7 +6,7 @@ export type InterviewPhase =
   | "idle" | "generating_questions" | "asking" | "recording" | "transcribing"
   | "evaluating" | "error" | "finishing" | "done";
 export type InterviewWorkPhase = Extract<InterviewPhase,
-  "generating_questions" | "asking" | "recording" | "transcribing" | "evaluating">;
+  "generating_questions" | "asking" | "recording" | "transcribing" | "evaluating" | "finishing">;
 
 export interface InterviewFailure {
   stage: InterviewWorkPhase;
@@ -46,6 +46,7 @@ export type InterviewEvent =
   | { type: "FAILED"; operationId: number; message: string; code?: string; partialTranscript?: string }
   | { type: "RETRY"; operationId: number }
   | { type: "ABORT" }
+  | { type: "SESSION_IDENTIFIED"; operationId: number; interviewId: string }
   | { type: "FINISHED"; operationId: number };
 
 export function initialInterviewSnapshot(): InterviewSnapshot {
@@ -73,7 +74,7 @@ function nextMain(state: InterviewSnapshot): InterviewSnapshot {
 export function transition(state: InterviewSnapshot, event: InterviewEvent): InterviewSnapshot {
   if (state.phase === "done") return state;
   if (event.type === "ABORT") {
-    return state.phase === "finishing" ? state : enter(state, "finishing", { endReason: "aborted", error: null });
+    return state.endReason !== null ? state : enter(state, "finishing", { endReason: "aborted", error: null });
   }
   if (event.type === "START") {
     return state.phase === "idle" ? enter(state, "generating_questions", { coverLetterId: event.coverLetterId }) : state;
@@ -81,6 +82,8 @@ export function transition(state: InterviewSnapshot, event: InterviewEvent): Int
   if (event.operationId !== state.operationId) return state;
 
   switch (event.type) {
+    case "SESSION_IDENTIFIED":
+      return state.phase === "finishing" ? { ...state, interviewId: event.interviewId } : state;
     case "QUESTIONS_READY": {
       if (state.phase !== "generating_questions") return state;
       const questions = interviewMainQuestionsSchema.safeParse(event.result.questions);
@@ -120,7 +123,7 @@ export function transition(state: InterviewSnapshot, event: InterviewEvent): Int
       });
     }
     case "FAILED":
-      if (!["generating_questions", "asking", "recording", "transcribing", "evaluating"].includes(state.phase)) return state;
+      if (!["generating_questions", "asking", "recording", "transcribing", "evaluating", "finishing"].includes(state.phase)) return state;
       return enter(state, "error", { error: {
         stage: state.phase as InterviewWorkPhase, message: event.message,
         code: event.code, partialTranscript: event.partialTranscript,

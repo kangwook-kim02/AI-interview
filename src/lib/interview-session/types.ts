@@ -1,4 +1,9 @@
-import type { FollowUpResponse, StartInterviewResponse } from "@/types/interview";
+import type { FinishInterviewResponse, FollowUpResponse, StartInterviewResponse } from "@/types/interview";
+
+/** Only explicit server rejections before creation may be treated as a canceled start. */
+export class InterviewNotCreatedError extends Error {
+  constructor() { super("Interview was not created"); this.name = "InterviewNotCreatedError"; }
+}
 
 export interface InterviewQuestionPosition {
   /** 0-based main question index. */
@@ -18,4 +23,9 @@ export interface InterviewSessionIO {
     input: InterviewQuestionPosition & { interviewId: string; answerTranscript: string },
     signal: AbortSignal,
   ): Promise<FollowUpResponse>;
+  finish(input: {
+    interviewId: string;
+    status: "completed" | "aborted";
+    answers: (InterviewQuestionPosition & { answerTranscript: string })[];
+  }, signal: AbortSignal): Promise<FinishInterviewResponse>;
 }

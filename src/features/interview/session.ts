@@ -1,8 +1,8 @@
 "use client";
 
-import type { InterviewSessionIO } from "@/lib/interview-session/types";
+import { InterviewNotCreatedError, type InterviewSessionIO } from "@/lib/interview-session/types";
 import { STTError, type STTPort, type TTSPort } from "@/lib/speech";
-import { followUpResponseSchema, startInterviewResponseSchema } from "@/types/interview";
+import { finishInterviewResponseSchema, followUpResponseSchema, startInterviewResponseSchema, type StartInterviewResponse } from "@/types/interview";
 import type { InterviewEvent, InterviewSnapshot } from "./machine";
 import { createInterviewStore } from "./store";
 
@@ -18,6 +18,7 @@ export function createInterviewSession({ io, tts, stt }: InterviewSessionDepende
   let disposed = false;
   let request: AbortController | null = null;
   let recognitionId: number | null = null;
+  let starting: Promise<StartInterviewResponse> | null = null;
 
   function send(event: InterviewEvent) {
     if (!disposed) store.send(event);
@@ -35,7 +36,10 @@ export function createInterviewSession({ io, tts, stt }: InterviewSessionDepende
       message: error instanceof STTError ? "답변을 알아듣지 못했어요. 같은 질문에 다시 답해 주세요."
         : snapshot.phase === "generating_questions" ? "면접 질문을 준비하지 못했어요. 다시 시도해 주세요."
           : snapshot.phase === "asking" ? "질문을 재생하지 못했어요. 다시 시도해 주세요."
-            : snapshot.phase === "evaluating" ? "답변을 판단하지 못했어요. 다시 시도해 주세요."
+            : snapshot.phase === "finishing" ? store.getState().interviewId
+              ? "면접 기록을 저장하지 못했어요. 이 화면에서 다시 시도해 주세요."
+              : "면접 생성 결과를 확인하지 못했어요. 연결을 확인한 뒤 대시보드에서 다시 시작해 주세요."
+              : snapshot.phase === "evaluating" ? "답변을 저장하거나 다음 질문을 준비하지 못했어요. 다시 시도해 주세요."
               : "음성 답변을 마치지 못했어요. 같은 질문에 다시 답해 주세요.",
       ...(error instanceof STTError ? { code: error.code, partialTranscript: error.partialTranscript } : {}),
     });
@@ -48,7 +52,8 @@ export function createInterviewSession({ io, tts, stt }: InterviewSessionDepende
         case "generating_questions": {
           const controller = new AbortController();
           request = controller;
-          const result = startInterviewResponseSchema.parse(await io.start(snapshot.coverLetterId!, controller.signal));
+          starting = io.start(snapshot.coverLetterId!, controller.signal).then((result) => startInterviewResponseSchema.parse(result));
+          const result = await starting;
           send({ type: "QUESTIONS_READY", operationId, result });
           break;
         }
@@ -90,10 +95,32 @@ export function createInterviewSession({ io, tts, stt }: InterviewSessionDepende
         case "error":
           cancelSpeech();
           break;
-        case "finishing":
+        case "finishing": {
           cancelSpeech();
+          let interviewId = snapshot.interviewId;
+          // A canceled fetch cannot cancel server creation. Recover its ID before ending.
+          if (!interviewId && starting) {
+            try {
+              interviewId = (await starting).interviewId;
+              send({ type: "SESSION_IDENTIFIED", operationId, interviewId });
+            } catch (error) {
+              if (!(error instanceof InterviewNotCreatedError)) throw error;
+              // Explicit pre-creation rejection: nothing was created or needs saving.
+            }
+          }
+          if (interviewId) {
+            const controller = new AbortController();
+            request = controller;
+            const result = finishInterviewResponseSchema.parse(await io.finish({
+              interviewId, status: snapshot.endReason!, answers: snapshot.answers,
+            }, controller.signal));
+            if (result.interviewId !== interviewId || result.status !== snapshot.endReason) {
+              throw new Error("Interview finish result mismatch");
+            }
+          }
           send({ type: "FINISHED", operationId });
           break;
+        }
       }
     } catch (error) {
       fail(snapshot, error);
@@ -102,7 +129,8 @@ export function createInterviewSession({ io, tts, stt }: InterviewSessionDepende
 
   const unsubscribe = store.subscribe((snapshot, previous) => {
     if (snapshot.operationId === previous.operationId) return;
-    request?.abort();
+    // Keep an in-flight start alive when explicitly ending so its new ID can be recovered.
+    if (!(previous.phase === "generating_questions" && snapshot.phase === "finishing")) request?.abort();
     request = null;
     void run(snapshot);
   });
